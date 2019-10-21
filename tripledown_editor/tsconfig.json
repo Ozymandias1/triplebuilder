@@ -1,16 +1,10 @@
 {
     "compilerOptions": {
-        "target": "es6",
         "module": "commonjs",
-        "noImplicitAny": true,
-        "sourceMap": true,
-        "outDir": "js",
-        "baseUrl": ".",
-        "paths": {
-            "*": ["node_modules/*"]
-        }
+        "target": "es5",
+        "sourceMap": true
     },
-    "include": [
-        "editor/**/*",
+    "exclude": [
+        "node_modules"
     ]
 }

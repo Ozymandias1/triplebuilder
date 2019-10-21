@@ -1,9 +1,9 @@
-import { app, BrowserWindow } from 'electron';
-import * as path from 'path';
-import * as url from 'url';
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+const url = require('url');
 
 // 메인창 인스턴스
-let win: Electron.BrowserWindow;
+let win;
 
 /**
  * 창 생성
@@ -19,7 +19,7 @@ function createWindow() {
 
     //win.loadFile(path.join(__dirname, '../index.html'));
     win.loadURL(url.format({
-        pathname: path.join(__dirname, '../index.html'),
+        pathname: path.join(__dirname, 'index.html'),
         protocol: 'file:',
         slashes: true
     }));
