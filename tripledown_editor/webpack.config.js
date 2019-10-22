@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-    mode: 'production',
+    mode: 'development',
     entry: path.join(__dirname, './editor_src/core.ts'),
     output: {
         filename: './js/Engine.js',

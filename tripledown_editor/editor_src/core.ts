@@ -6,6 +6,7 @@ import {
     WebGLRenderer
 } from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
+import {FileDragDrop} from './fileDragDrop';
 
 /**
  * WebGL 코어
@@ -17,11 +18,13 @@ export class Core {
     private camera: PerspectiveCamera;
     private control: OrbitControls;
     private grid: GridHelper;
+    private fileDragDropHandler: FileDragDrop;
 
     /**
      * 생성자
      */
     constructor() {
+
         // 렌더러
         this.renderer = new WebGLRenderer({
             antialias: true
@@ -66,6 +69,9 @@ export class Core {
         window.addEventListener('resize', this.onResize.bind(this), false);
 
         this.render();
+
+        // 파일 드래그앤드랍 핸들러
+        this.fileDragDropHandler = new FileDragDrop();
     }
 
     /**
