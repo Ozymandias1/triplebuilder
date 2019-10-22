@@ -7,8 +7,9 @@ import {
     HemisphereLight,
     DirectionalLight,
     PlaneGeometry,
-    MeshStandardMaterial,
-    Mesh
+    MeshPhongMaterial,
+    Mesh,
+    PCFSoftShadowMap
 } from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import {FileDragDrop} from './fileDragDrop';
@@ -44,6 +45,8 @@ export class Core {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.gammaInput = true;
         this.renderer.gammaOutput = true;
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMapType = PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
 
         // 씬 객체
@@ -63,6 +66,18 @@ export class Core {
         this.dirLight.position.multiplyScalar( 30 );
         this.scene.add( this.dirLight );
 
+        const shadowMapDist = 10;
+        this.dirLight.castShadow = true;
+        this.dirLight.shadow.mapSize.width = 1024;
+        this.dirLight.shadow.mapSize.height = 1024;
+        this.dirLight.shadow.camera.left = -shadowMapDist;
+        this.dirLight.shadow.camera.right = shadowMapDist;
+        this.dirLight.shadow.camera.top = shadowMapDist;
+        this.dirLight.shadow.camera.bottom = -shadowMapDist;
+        this.dirLight.shadow.camera.far = 3500;
+        this.dirLight.shadow.bias = -0.00001;
+
+
         // 카메라
         this.camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 1000);
         this.camera.position.set(0, 50, -50);
@@ -79,7 +94,8 @@ export class Core {
         this.scene.add(this.grid);
         // 바닥평면
         const planeGeometry = new PlaneGeometry(100, 100, 1, 1);
-        const planeMaterial = new MeshStandardMaterial({
+        planeGeometry.rotateX(Math.PI * -0.5);
+        const planeMaterial = new MeshPhongMaterial({
             color: 0xcccccc
         });
         const plane = new Mesh(planeGeometry, planeMaterial);

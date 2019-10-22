@@ -1,5 +1,6 @@
 import {
-    Scene
+    Scene,
+    Mesh
 } from 'three';
 import {MTLLoader} from 'three/examples/jsm/loaders/MTLLoader';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
@@ -35,6 +36,15 @@ export class ModelLoader {
                 materials.preload();
 
                 objLoader.setMaterials(materials).load(option.objUrl, (object) => {
+
+                    object.traverse( (child) => {
+                        if( child instanceof Mesh ) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    object.scale.set(10, 10, 10);
+
                     this.scene.add(object);
                 }, (progress) => {
 
