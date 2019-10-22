@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -30,6 +30,9 @@ function createWindow() {
     win.on('closed', () => {
         win = null;
     });
+
+    // 메뉴 생성
+    createMenu();
 }
 
 // 창 생성
@@ -52,3 +55,35 @@ app.on('activate', () => {
         createWindow();
     }
 });
+
+/**
+ * 메뉴 생성
+ */
+function createMenu() {
+
+    const template = [
+        {
+            label: 'File',
+            submenu: [
+                { label: 'Open OBJ Model' },
+                { type: 'separator' },
+                { role: 'quit' }
+            ]
+        },
+        {
+            label: 'Help',
+            submenu: [
+                { label: 'About...' }
+            ]
+        },
+        {
+            label: 'Dev',
+            submenu: [
+                { role: 'toggledevtools' }
+            ]
+        }
+    ];
+
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+}
