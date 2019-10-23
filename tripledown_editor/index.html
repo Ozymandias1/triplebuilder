@@ -13,7 +13,14 @@
 </head>
 <body>
     <script>
+        // 엔진 초기화
         var engine = new Engine.Core();
+
+        // 메시지 수신
+        const ipcRenderer = require('electron').ipcRenderer;
+        ipcRenderer.on('OpenObjModel', (event, data) => {
+            engine.loadModel(data);
+        });
     </script>
         
 </body>

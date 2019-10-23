@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, dialog } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -65,7 +65,30 @@ function createMenu() {
         {
             label: 'File',
             submenu: [
-                { label: 'Open OBJ Model' },
+                { 
+                    label: 'Open OBJ Model',
+                    click: function() {
+                        dialog.showOpenDialog(win, {
+                            title: 'OBJ 파일 열기',
+                            filters: [
+                                { name: 'OBJ Model (*.obj)', extensions: ['obj'] }
+                            ],
+                            properties: ['openFile']
+                        }).then( (result) => {
+                            if( result.canceled === false ) {
+                                const dirName = path.dirname(result.filePaths[0]);
+                                const fileNameOnly = path.basename(result.filePaths[0], '.obj');
+                                const data = {
+                                    dirPath: dirName + '\\',
+                                    objName: fileNameOnly + '.obj',
+                                    mtlName: fileNameOnly + '.mtl'
+                                };
+                                // 렌더러 프로세스로 전달
+                                win.webContents.send('OpenObjModel', data);
+                            }
+                        });
+                    }
+                },
                 { type: 'separator' },
                 { role: 'quit' }
             ]

@@ -77,7 +77,6 @@ export class Core {
         this.dirLight.shadow.camera.far = 3500;
         this.dirLight.shadow.bias = -0.00001;
 
-
         // 카메라
         this.camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 1000);
         this.camera.position.set(0, 50, -50);
@@ -108,8 +107,8 @@ export class Core {
 
         this.render();
 
-        // 파일 드래그앤드랍 핸들러
-        this.fileDragDropHandler = new FileDragDrop();
+        // 파일 드래그앤드랍 핸들러, 경로 문제로 보류
+        //this.fileDragDropHandler = new FileDragDrop(this);
         // 모델 로더
         this.modelLoader = new ModelLoader(this.scene);
     }

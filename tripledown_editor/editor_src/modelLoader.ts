@@ -4,10 +4,12 @@ import {
 } from 'three';
 import {MTLLoader} from 'three/examples/jsm/loaders/MTLLoader';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
+import * as path from 'path';
 
 interface URLData {
-    objUrl: string;
-    mtlUrl: string;
+    dirPath: string;
+    objName: string;
+    mtlName: string;
 }
 
 /**
@@ -24,6 +26,10 @@ export class ModelLoader {
         this.scene = scene;
     }
 
+    /**
+     * OBJ 모델 로드
+     * @param option 모델 경로 데이터
+     */
     load(option: URLData) {
 
         try {
@@ -31,11 +37,11 @@ export class ModelLoader {
             const mtlLoader = new MTLLoader();
             const objLoader = new OBJLoader();
 
-            mtlLoader.load(option.mtlUrl, (materials) => {
+            mtlLoader.setPath(option.dirPath).load(option.mtlName, (materials) => {
 
                 materials.preload();
 
-                objLoader.setMaterials(materials).load(option.objUrl, (object) => {
+                objLoader.setMaterials(materials).setPath(option.dirPath).load(option.objName, (object) => {
 
                     object.traverse( (child) => {
                         if( child instanceof Mesh ) {
@@ -43,7 +49,7 @@ export class ModelLoader {
                             child.receiveShadow = true;
                         }
                     });
-                    object.scale.set(10, 10, 10);
+                    object.scale.set(5,5,5);
 
                     this.scene.add(object);
                 }, (progress) => {
