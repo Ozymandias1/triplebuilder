@@ -12,6 +12,8 @@
   "keywords": [],
   "description": "",
   "devDependencies": {
+    "@types/node": "^12.11.5",
+    "ammojs-typed": "github:giniedp/ammojs-typed",
     "electron": "^6.0.12",
     "ts-loader": "^6.2.0",
     "typescript": "^3.6.4",
@@ -19,6 +21,7 @@
     "webpack-cli": "^3.3.9"
   },
   "dependencies": {
+    "ammo.js": "github:kripken/ammo.js",
     "three": "^0.109.0"
   }
 }

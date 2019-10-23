@@ -2,7 +2,8 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es5",
-        "sourceMap": true
+        "sourceMap": true,
+        //"typeRoots": ["node_modules/@types", "types","node_modules/ammojs-typed/ammo/ambient"]
     },
     "exclude": [
         "node_modules"

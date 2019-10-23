@@ -14,6 +14,7 @@ import {
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import {FileDragDrop} from './fileDragDrop';
 import {ModelLoader} from './modelLoader';
+import Ammo from 'ammojs-typed';
 
 /**
  * WebGL 코어
@@ -111,6 +112,9 @@ export class Core {
         //this.fileDragDropHandler = new FileDragDrop(this);
         // 모델 로더
         this.modelLoader = new ModelLoader(this.scene);
+
+        var a = new Ammo.btVector3(0, 1, 2);
+        console.log('btVector', a);
     }
 
     /**

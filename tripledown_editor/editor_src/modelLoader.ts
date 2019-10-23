@@ -4,7 +4,6 @@ import {
 } from 'three';
 import {MTLLoader} from 'three/examples/jsm/loaders/MTLLoader';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
-import * as path from 'path';
 
 interface URLData {
     dirPath: string;
