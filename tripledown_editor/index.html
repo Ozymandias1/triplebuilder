@@ -8,19 +8,28 @@
             margin: 0px;
             overflow: hidden;
         }
-    </style>    
+    </style>
     <script src="js/Engine.js"></script>
+    <script src="js/ammo.js"></script>
 </head>
 <body>
     <script>
-        // 엔진 초기화
-        var engine = new Engine.Core();
+        Ammo().then( function ( AmmoLib ) {
+			Ammo = AmmoLib;
 
-        // 메시지 수신
-        const ipcRenderer = require('electron').ipcRenderer;
-        ipcRenderer.on('OpenObjModel', (event, data) => {
-            engine.loadModel(data);
-        });
+            // 엔진 초기화
+            var engine = null;
+            setTimeout(function(){
+                engine = new Engine.Core();
+            }, 1000);
+
+            // 메시지 수신
+            const ipcRenderer = require('electron').ipcRenderer;
+            ipcRenderer.on('OpenObjModel', (event, data) => {
+                engine.loadModel(data);
+            });
+		} );
+
     </script>
         
 </body>

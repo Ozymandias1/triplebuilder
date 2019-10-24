@@ -9,12 +9,19 @@ import {
     PlaneGeometry,
     MeshPhongMaterial,
     Mesh,
-    PCFSoftShadowMap
+    PCFSoftShadowMap,
+    BoxBufferGeometry,
+    Vector3,
+    Quaternion,
+    Object3D,
+    Material,
+    Clock,
+    Math as THREEMATH
 } from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import {FileDragDrop} from './fileDragDrop';
 import {ModelLoader} from './modelLoader';
-import Ammo from 'ammojs-typed';
+import './ammojsDeclare';
 
 /**
  * WebGL 코어
@@ -26,6 +33,7 @@ export class Core {
     private camera: PerspectiveCamera;
     private control: OrbitControls;
     private grid: GridHelper;
+    private clock: Clock;
     
     private hemiLight: HemisphereLight;
     private dirLight: DirectionalLight;
@@ -33,10 +41,22 @@ export class Core {
     private fileDragDropHandler: FileDragDrop;
     private modelLoader: ModelLoader;
 
+    private collisionConfiguration : Ammo.btDefaultCollisionConfiguration;
+    private dispatcher: Ammo.btCollisionDispatcher;
+    private broadPhase: Ammo.btDbvtBroadphase;
+    private solver: Ammo.btSequentialImpulseConstraintSolver;
+    private physicsWorld: Ammo.btDiscreteDynamicsWorld;
+    private transformAux1: Ammo.btTransform;
+    private tempBtVec3_1: Ammo.btVector3;
+    private rigidBodies: Array<Object3D>;
+    private physicsMargin: number;
+
     /**
      * 생성자
      */
     constructor() {
+
+        this.clock = new Clock();
 
         // 렌더러
         this.renderer = new WebGLRenderer({
@@ -47,7 +67,7 @@ export class Core {
         this.renderer.gammaInput = true;
         this.renderer.gammaOutput = true;
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMapType = PCFSoftShadowMap;
+        this.renderer.shadowMap.type = PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
 
         // 씬 객체
@@ -90,31 +110,213 @@ export class Core {
         this.control.screenSpacePanning = false;
         
         // 바닥 그리드
-        this.grid = new GridHelper(100, 100, 0xff0000, 0x000000);
-        this.scene.add(this.grid);
-        // 바닥평면
-        const planeGeometry = new PlaneGeometry(100, 100, 1, 1);
-        planeGeometry.rotateX(Math.PI * -0.5);
-        const planeMaterial = new MeshPhongMaterial({
-            color: 0xcccccc
-        });
-        const plane = new Mesh(planeGeometry, planeMaterial);
-        plane.castShadow = false;
-        plane.receiveShadow = true;
-        this.scene.add(plane);
-
-        // 창크기변경 이벤트 처리 등록
-        window.addEventListener('resize', this.onResize.bind(this), false);
-
-        this.render();
+        //this.grid = new GridHelper(100, 100, 0xff0000, 0x000000);
+        //this.scene.add(this.grid);
+        // // 바닥평면
+        // const planeGeometry = new PlaneGeometry(100, 100, 1, 1);
+        // planeGeometry.rotateX(Math.PI * -0.5);
+        // const planeMaterial = new MeshPhongMaterial({
+        //     color: 0xcccccc
+        // });
+        // const plane = new Mesh(planeGeometry, planeMaterial);
+        // plane.castShadow = false;
+        // plane.receiveShadow = true;
+        // this.scene.add(plane);
 
         // 파일 드래그앤드랍 핸들러, 경로 문제로 보류
         //this.fileDragDropHandler = new FileDragDrop(this);
         // 모델 로더
         this.modelLoader = new ModelLoader(this.scene);
+        // 물리요소 초기화
+        this.initPhysics();
 
-        var a = new Ammo.btVector3(0, 1, 2);
-        console.log('btVector', a);
+
+        // 창크기변경 이벤트 처리 등록
+        window.addEventListener('resize', this.onResize.bind(this), false);
+
+        // 렌더링 루프 시작
+        this.render();
+    }
+
+    private initPhysics() {
+
+        this.collisionConfiguration  = new Ammo.btDefaultCollisionConfiguration();
+        this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
+        this.broadPhase = new Ammo.btDbvtBroadphase();
+        this.solver = new Ammo.btSequentialImpulseConstraintSolver();
+        this.physicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher, this.broadPhase, this.solver, this.collisionConfiguration);        
+        this.physicsWorld.setGravity(new Ammo.btVector3(0, -7.8, 0));
+
+        this.rigidBodies = [];
+        this.physicsMargin = 0.05;
+        this.transformAux1 = new Ammo.btTransform();
+        this.tempBtVec3_1 = new Ammo.btVector3(0, 0, 0);
+
+        // 바닥판 생성
+		var pos = new Vector3();
+        var quat = new Quaternion();
+        pos.set( 0, - 0.5, 0 );
+        quat.set( 0, 0, 0, 1 );
+
+        const mass = 0;
+        const groundWidth = 100, groundHeight = 100, groundThickness = 1;
+        const ground = new Mesh(
+            new BoxBufferGeometry(groundWidth, groundThickness, groundHeight, 1, 1, 1),
+            new MeshPhongMaterial({ color: 0xffffff })
+        );
+        const groundShape = new Ammo.btBoxShape( new Ammo.btVector3( groundWidth * 0.5, groundThickness * 0.5, groundHeight * 0.5));
+        groundShape.setMargin(this.physicsMargin);
+        this.createRigidBody(ground, groundShape, mass, pos, quat, null, null );
+        ground.receiveShadow = true;
+
+        // 테스트 객체
+        var bridgeMass = 100;
+        var bridgeHalfExtents = new Vector3( 7, 0.2, 1.5 );
+        pos.set( 0, 10.2, 0 );
+        quat.set( 0, 0, 0, 1 );
+        this.createPhysicsObject( bridgeMass, bridgeHalfExtents, pos, quat, new MeshPhongMaterial({color:0xB3B865}) );
+
+        for(let i = 0; i < 50; i++) {
+            var boxMass = 100;
+            var boxHalfExtends = new Vector3( 2.5, 2.5, 2.5 );
+            pos.set( THREEMATH.randFloatSpread(100), THREEMATH.randFloat(10, 100), THREEMATH.randFloatSpread(100) );
+            quat.set( 0, 0, 0, 1 );
+            this.createPhysicsObject( boxMass, boxHalfExtends, pos, quat, new MeshPhongMaterial({color:0xB3B865}) );
+        }
+
+    }
+
+    private createPhysicsObject( 
+        mass: number, 
+        halfExtents: Vector3,
+        pos: Vector3, 
+        quat: Quaternion, 
+        material: Material){
+        
+        const object = new Mesh( new BoxBufferGeometry( halfExtents.x * 2, halfExtents.y * 2, halfExtents.z * 2 ), material );
+        object.position.copy( pos );
+        object.quaternion.copy( quat );
+        
+        object.userData.mass = mass;
+        object.castShadow = true;
+        object.receiveShadow = true;
+
+        const shape = this.createConvexHullPhysicsShape( (<any>object.geometry).attributes.position.array );
+        shape.setMargin( this.physicsMargin );
+
+        const physicsBody = this.createRigidBody( object, shape, object.userData.mass, null, null, object.userData.velocity, object.userData.angularVelocity );
+
+        const btVecUserData = new Ammo.btVector3(0, 0, 0);
+        btVecUserData.threeObject = object;
+        physicsBody.setUserPointer( btVecUserData );
+    }
+
+    private createConvexHullPhysicsShape( coords: Array<number> ): Ammo.btConvexHullShape {
+
+        const shape = new Ammo.btConvexHullShape();
+        for(let i = 0; i < coords.length; i+=3) {
+            this.tempBtVec3_1.setValue(coords[i], coords[i+1], coords[i+2]);
+            const lastOne = (i >= (coords.length - 3));
+            shape.addPoint( this.tempBtVec3_1, lastOne );
+        }
+
+        return shape;
+
+    }
+
+    private createRigidBody(
+        object: Mesh,
+        physicsShape: Ammo.btCollisionShape,
+        mass: number,
+        pos: Vector3,
+        quat: Quaternion,
+        vel: Ammo.btVector3,
+        angVel: Ammo.btVector3 
+    ) {
+        if ( pos ) {
+
+            object.position.copy( pos );
+
+        } else {
+
+            pos = object.position;
+
+        }
+        if ( quat ) {
+
+            object.quaternion.copy( quat );
+
+        } else {
+
+            quat = object.quaternion;
+
+        }
+
+        var transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin( new Ammo.btVector3( pos.x, pos.y, pos.z ) );
+        transform.setRotation( new Ammo.btQuaternion( quat.x, quat.y, quat.z, quat.w ) );
+        var motionState = new Ammo.btDefaultMotionState( transform );
+
+        var localInertia = new Ammo.btVector3( 0, 0, 0 );
+        physicsShape.calculateLocalInertia( mass, localInertia );
+
+        var rbInfo = new Ammo.btRigidBodyConstructionInfo( mass, motionState, physicsShape, localInertia );
+        var body = new Ammo.btRigidBody( rbInfo );
+        body.setFriction( 0.5 );
+        
+        if ( vel ) {
+
+            body.setLinearVelocity( new Ammo.btVector3( vel.x(), vel.y(), vel.z() ) );
+
+        }
+        if ( angVel ) {
+
+            body.setAngularVelocity( new Ammo.btVector3( angVel.x(), angVel.y(), angVel.z() ) );
+
+        }
+        
+        object.userData.physicsBody = body;
+        object.userData.collided = false;
+        this.scene.add( object );
+
+        if ( mass > 0 ) {
+
+            this.rigidBodies.push( object );
+
+            // Disable deactivation
+            body.setActivationState( 4 );
+
+        }
+
+        this.physicsWorld.addRigidBody( body );
+
+        return body;
+    }
+
+    updatePhysics(deltaTime: number) {
+
+        this.physicsWorld.stepSimulation( deltaTime, 10 );
+        
+        for ( var i = 0, il = this.rigidBodies.length; i < il; i ++ ) {
+
+            var objThree = this.rigidBodies[ i ];
+            var objPhys = objThree.userData.physicsBody;
+            var ms = objPhys.getMotionState();
+
+            if ( ms ) {
+
+                ms.getWorldTransform( this.transformAux1 );
+                var p = this.transformAux1.getOrigin();
+                var q = this.transformAux1.getRotation();
+                objThree.position.set( p.x(), p.y(), p.z() );
+                objThree.quaternion.set( q.x(), q.y(), q.z(), q.w() );
+
+                objThree.userData.collided = false;
+
+            }
+
+        }
     }
 
     /**
@@ -135,6 +337,9 @@ export class Core {
     private render() {
 
         requestAnimationFrame(this.render.bind(this));
+
+        const deltaTime = this.clock.getDelta();
+        this.updatePhysics(deltaTime);
 
         this.renderer.render(this.scene, this.camera);
 
