@@ -20,6 +20,7 @@ declare namespace Ammo {
         );
         setGravity(gravity:btVector3);
         addRigidBody(body: btRigidBody);
+        removeRigidBody(body: btRigidBody);
         stepSimulation( deltaTime: number, arg: number);
     }
 

@@ -1,11 +1,14 @@
 import {
     Scene,
-    Mesh
+    Mesh,
+    BufferGeometry,
+    Box3,
+    Vector3
 } from 'three';
 import {MTLLoader} from 'three/examples/jsm/loaders/MTLLoader';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
 
-interface URLData {
+export interface URLData {
     dirPath: string;
     objName: string;
     mtlName: string;
@@ -31,39 +34,61 @@ export class ModelLoader {
      */
     load(option: URLData) {
 
-        try {
+        return new Promise( (resolve, reject) => {
 
-            const mtlLoader = new MTLLoader();
-            const objLoader = new OBJLoader();
+            try {
 
-            mtlLoader.setPath(option.dirPath).load(option.mtlName, (materials) => {
-
-                materials.preload();
-
-                objLoader.setMaterials(materials).setPath(option.dirPath).load(option.objName, (object) => {
-
-                    object.traverse( (child) => {
-                        if( child instanceof Mesh ) {
+                const mtlLoader = new MTLLoader();
+                const objLoader = new OBJLoader();
+    
+                mtlLoader.setPath(option.dirPath).load(option.mtlName, (materials) => {
+    
+                    materials.preload();
+    
+                    objLoader.setMaterials(materials).setPath(option.dirPath).load(option.objName, (object) => {
+                        
+                        // 중점이동 테스트
+                        const result = [];
+                        const childCount = object.children.length;
+                        for(let i = 0; i < childCount; i++) {
+                            const child = <Mesh>object.children[0];
                             child.castShadow = true;
                             child.receiveShadow = true;
+    
+                            const geometry = <BufferGeometry>child.geometry;
+                            geometry.scale(5, 5, 5);
+                            geometry.computeBoundingBox();
+    
+                            const center = new Vector3();
+                            geometry.boundingBox.getCenter(center);
+                            geometry.translate(-center.x, -center.y, -center.z);
+                            child.position.copy(center);
+    
+                            this.scene.add(child);
+                            result.push(child);
+
+                            // const clone = child.clone();
+                            // clone.position.y += 50;
+                            // this.scene.add(clone);
+                            // result.push(clone);
                         }
+
+                        resolve(result);
+                    }, (progress) => {
+    
+                    }, (err) => {
+                        throw err;
                     });
-                    object.scale.set(5,5,5);
-
-                    this.scene.add(object);
+    
                 }, (progress) => {
-
                 }, (err) => {
                     throw err;
                 });
-
-            }, (progress) => {
-            }, (err) => {
-                throw err;
-            });
-
-        } catch (err) {
-            console.error(err);
-        }
+    
+            } catch (err) {
+                console.error(err);
+                reject(err);
+            }
+        });
     }
 }

@@ -16,11 +16,12 @@ import {
     Object3D,
     Material,
     Clock,
-    Math as THREEMATH
+    Math as THREEMATH,
+    Box3
 } from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import {FileDragDrop} from './fileDragDrop';
-import {ModelLoader} from './modelLoader';
+import {ModelLoader, URLData} from './modelLoader';
 import './ammojsDeclare';
 
 /**
@@ -50,6 +51,10 @@ export class Core {
     private tempBtVec3_1: Ammo.btVector3;
     private rigidBodies: Array<Object3D>;
     private physicsMargin: number;
+
+    // 테스트용 변수
+    private savedRigidBody: Array<Ammo.btRigidBody>;
+    private savedVelocity: Array<Vector3>;
 
     /**
      * 생성자
@@ -87,7 +92,7 @@ export class Core {
         this.dirLight.position.multiplyScalar( 30 );
         this.scene.add( this.dirLight );
 
-        const shadowMapDist = 10;
+        const shadowMapDist = 100;
         this.dirLight.castShadow = true;
         this.dirLight.shadow.mapSize.width = 1024;
         this.dirLight.shadow.mapSize.height = 1024;
@@ -108,6 +113,7 @@ export class Core {
         this.control.enableDamping = false;
         this.control.enableKeys = false;
         this.control.screenSpacePanning = false;
+        this.control.rotateSpeed = 0.5;
         
         // 바닥 그리드
         //this.grid = new GridHelper(100, 100, 0xff0000, 0x000000);
@@ -138,6 +144,9 @@ export class Core {
         this.render();
     }
 
+    /**
+     * 물리엔진 초기화
+     */
     private initPhysics() {
 
         this.collisionConfiguration  = new Ammo.btDefaultCollisionConfiguration();
@@ -148,7 +157,7 @@ export class Core {
         this.physicsWorld.setGravity(new Ammo.btVector3(0, -7.8, 0));
 
         this.rigidBodies = [];
-        this.physicsMargin = 0.05;
+        this.physicsMargin = 0.01;
         this.transformAux1 = new Ammo.btTransform();
         this.tempBtVec3_1 = new Ammo.btVector3(0, 0, 0);
 
@@ -159,7 +168,7 @@ export class Core {
         quat.set( 0, 0, 0, 1 );
 
         const mass = 0;
-        const groundWidth = 100, groundHeight = 100, groundThickness = 1;
+        const groundWidth = 1000, groundHeight = 1000, groundThickness = 1;
         const ground = new Mesh(
             new BoxBufferGeometry(groundWidth, groundThickness, groundHeight, 1, 1, 1),
             new MeshPhongMaterial({ color: 0xffffff })
@@ -169,20 +178,20 @@ export class Core {
         this.createRigidBody(ground, groundShape, mass, pos, quat, null, null );
         ground.receiveShadow = true;
 
-        // 테스트 객체
-        var bridgeMass = 100;
-        var bridgeHalfExtents = new Vector3( 7, 0.2, 1.5 );
-        pos.set( 0, 10.2, 0 );
-        quat.set( 0, 0, 0, 1 );
-        this.createPhysicsObject( bridgeMass, bridgeHalfExtents, pos, quat, new MeshPhongMaterial({color:0xB3B865}) );
+        // // 테스트 객체
+        // var bridgeMass = 100;
+        // var bridgeHalfExtents = new Vector3( 7, 0.2, 1.5 );
+        // pos.set( 0, 10.2, 0 );
+        // quat.set( 0, 0, 0, 1 );
+        // this.createPhysicsObject( bridgeMass, bridgeHalfExtents, pos, quat, new MeshPhongMaterial({color:0xB3B865}) );
 
-        for(let i = 0; i < 50; i++) {
-            var boxMass = 100;
-            var boxHalfExtends = new Vector3( 2.5, 2.5, 2.5 );
-            pos.set( THREEMATH.randFloatSpread(100), THREEMATH.randFloat(10, 100), THREEMATH.randFloatSpread(100) );
-            quat.set( 0, 0, 0, 1 );
-            this.createPhysicsObject( boxMass, boxHalfExtends, pos, quat, new MeshPhongMaterial({color:0xB3B865}) );
-        }
+        // for(let i = 0; i < 50; i++) {
+        //     var boxMass = 100;
+        //     var boxHalfExtends = new Vector3( 2.5, 2.5, 2.5 );
+        //     pos.set( THREEMATH.randFloatSpread(100), THREEMATH.randFloat(10, 100), THREEMATH.randFloatSpread(100) );
+        //     quat.set( 0, 0, 0, 1 );
+        //     this.createPhysicsObject( boxMass, boxHalfExtends, pos, quat, new MeshPhongMaterial({color:0xB3B865}) );
+        // }
 
     }
 
@@ -209,6 +218,24 @@ export class Core {
         const btVecUserData = new Ammo.btVector3(0, 0, 0);
         btVecUserData.threeObject = object;
         physicsBody.setUserPointer( btVecUserData );
+    }
+
+    private createPhysicsObjectByMesh(
+        mesh: Mesh,
+        mass: number
+    ) {
+
+        mesh.userData.mass = mass;
+
+        const shape = this.createConvexHullPhysicsShape( (<any>mesh.geometry).attributes.position.array );
+        shape.setMargin( this.physicsMargin );
+
+        const physicsBody = this.createRigidBody( mesh, shape, mesh.userData.mass, null, null, mesh.userData.velocity, mesh.userData.mass.angularVelocity );
+        
+        const btVecUserData = new Ammo.btVector3(0, 0, 0);
+        btVecUserData.threeObject = mesh;
+        physicsBody.setUserPointer( btVecUserData );
+
     }
 
     private createConvexHullPhysicsShape( coords: Array<number> ): Ammo.btConvexHullShape {
@@ -348,8 +375,45 @@ export class Core {
     /**
      * 모델 로드
      */
-    public loadModel(option) {
-        this.modelLoader.load(option);
+    public loadModel(option: URLData) {
+
+        this.savedRigidBody = [];
+        this.savedVelocity = [];
+
+        const scope = this;
+        this.modelLoader.load(option).then( (result: Array<Mesh> ) => {
+            console.log('core.loadModel succeeded.', result);
+
+            // 중점
+            for(let i = 0; i < result.length; i++) {
+                scope.createPhysicsObjectByMesh(result[i], 100);
+                
+                scope.physicsWorld.removeRigidBody( result[i].userData.physicsBody );
+                scope.savedRigidBody.push(result[i].userData.physicsBody);
+
+                const velocity = result[i].position.clone();
+                velocity.normalize();
+                velocity.multiplyScalar(10);
+                scope.savedVelocity.push(velocity);
+                console.log(velocity);
+            }
+        }).catch( (err) => {
+            console.error('core.loadModel failed.', err);
+        });
+    }
+
+    public test() {
+
+        // 모델링 중점 계산
+
+        for(let i = 0; i < this.savedRigidBody.length; i++) {
+            const rigidBody = this.savedRigidBody[i];
+            const velocity = this.savedVelocity[i];
+
+            this.physicsWorld.addRigidBody(rigidBody);
+            rigidBody.setLinearVelocity(new Ammo.btVector3(velocity.x, velocity.y, velocity.z));
+            rigidBody.setAngularVelocity(new Ammo.btVector3(velocity.x, velocity.y, velocity.z));
+        }
     }
 };
 

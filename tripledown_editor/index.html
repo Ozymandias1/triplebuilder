@@ -13,6 +13,7 @@
     <script src="js/ammo.js"></script>
 </head>
 <body>
+    <button onclick="onBtnTest();" style="position:absolute;left:10px;top:10px;">Test</button>
     <script>
         Ammo().then( function ( AmmoLib ) {
 			Ammo = AmmoLib;
@@ -28,8 +29,11 @@
             ipcRenderer.on('OpenObjModel', (event, data) => {
                 engine.loadModel(data);
             });
-		} );
 
+            window.onBtnTest = function() {
+                engine.test();
+            }
+		} );
     </script>
         
 </body>
