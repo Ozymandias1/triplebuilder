@@ -8,6 +8,9 @@ import {
 import {MTLLoader} from 'three/examples/jsm/loaders/MTLLoader';
 import {OBJLoader} from 'three/examples/jsm/loaders/OBJLoader';
 
+/**
+ * 모델 로드용 URL데이터
+ */
 export interface URLData {
     dirPath: string;
     objName: string;
@@ -47,7 +50,7 @@ export class ModelLoader {
     
                     objLoader.setMaterials(materials).setPath(option.dirPath).load(option.objName, (object) => {
                         
-                        // 중점이동 테스트
+                        // 로드된 객체를 그룹으로부터 분리하고 중점이동후 씬에 바로 추가한다.
                         const result = [];
                         const childCount = object.children.length;
                         for(let i = 0; i < childCount; i++) {
@@ -66,11 +69,6 @@ export class ModelLoader {
     
                             this.scene.add(child);
                             result.push(child);
-
-                            // const clone = child.clone();
-                            // clone.position.y += 50;
-                            // this.scene.add(clone);
-                            // result.push(clone);
                         }
 
                         resolve(result);
