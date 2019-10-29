@@ -17,7 +17,8 @@ import {
     Material,
     Clock,
     Math as THREEMATH,
-    Box3
+    Box3,
+    BoxHelper
 } from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 import {FileDragDrop} from './fileDragDrop';
@@ -41,6 +42,9 @@ export class Core {
 
     private fileDragDropHandler: FileDragDrop;
     private modelLoader: ModelLoader;
+
+    // 에디팅
+    private prevSelectHelper: BoxHelper;
 
     private collisionConfiguration : Ammo.btDefaultCollisionConfiguration;
     private dispatcher: Ammo.btCollisionDispatcher;
@@ -86,7 +90,7 @@ export class Core {
         this.hemiLight.position.set( 0, 50, 0 );
         this.scene.add( this.hemiLight );
 
-        this.dirLight = new DirectionalLight( 0xffffff, 1 );
+        this.dirLight = new DirectionalLight( 0xffffff, 0.6 );
         this.dirLight.color.setHSL( 0.1, 1, 0.95 );
         this.dirLight.position.set( - 1, 1.75, 1 );
         this.dirLight.position.multiplyScalar( 30 );
@@ -410,6 +414,28 @@ export class Core {
         }).catch( (err) => {
             console.error('core.loadModel failed.', err);
         });
+    }
+
+    /**
+     * 객체 선택
+     * @param uuid 객체 고유식별자
+     */
+    public selectObject(uuid: string) {
+
+        const findObj = this.scene.getObjectByProperty('uuid', uuid);
+        if( findObj ) {
+
+            // 이전 헬퍼 제거
+            if( this.prevSelectHelper ) {
+                this.scene.remove(this.prevSelectHelper);
+            }
+
+            // 새 헬퍼 생성
+            const helper = new BoxHelper(findObj, new Color(0xffff00));
+            this.scene.add(helper);
+
+            this.prevSelectHelper = helper;
+        }
     }
 
     public test() {

@@ -51,6 +51,12 @@
                 });
             });
 
+            // 리스트박스에서 선택 이벤트
+            document.getElementById('modelList').addEventListener('change', function() {
+                const uuid = this.options[this.selectedIndex].value;
+                engine.selectObject(uuid);
+            }, false);
+
             window.onBtnTest = function() {
                 engine.test();
             }
