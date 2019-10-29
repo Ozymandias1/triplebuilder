@@ -33,7 +33,7 @@ export class FileDragDrop {
                 dirPath: dirName + '\\',
                 objName: fileNameOnly + '.obj',
                 mtlName: fileNameOnly + '.mtl'
-            });
+            }, null);
             
         }
         event.preventDefault();

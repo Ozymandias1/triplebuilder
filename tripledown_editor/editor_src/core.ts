@@ -375,16 +375,17 @@ export class Core {
     /**
      * 모델 로드
      */
-    public loadModel(option: URLData) {
+    public loadModel(option: URLData, onLoad: Function) {
 
         this.savedRigidBody = [];
         this.savedVelocity = [];
 
         const scope = this;
         this.modelLoader.load(option).then( (result: Array<Mesh> ) => {
-            console.log('core.loadModel succeeded.', result);
+            // console.log('core.loadModel succeeded.', result);
 
             // 중점
+            const listBoxData = [];
             for(let i = 0; i < result.length; i++) {
                 scope.createPhysicsObjectByMesh(result[i], 100);
                 
@@ -395,7 +396,16 @@ export class Core {
                 velocity.normalize();
                 velocity.multiplyScalar(10);
                 scope.savedVelocity.push(velocity);
-                console.log(velocity);
+
+                // 리스트박스용 데이터
+                listBoxData.push({
+                    uuid: result[i].uuid,
+                    displayText: result[i].name
+                });
+            }
+
+            if( onLoad ) {
+                onLoad(listBoxData);
             }
         }).catch( (err) => {
             console.error('core.loadModel failed.', err);
