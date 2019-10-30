@@ -189,7 +189,7 @@ export class Core {
         // quat.set( 0, 0, 0, 1 );
         // this.createPhysicsObject( bridgeMass, bridgeHalfExtents, pos, quat, new MeshPhongMaterial({color:0xB3B865}) );
 
-        // for(let i = 0; i < 50; i++) {
+        // for(let i = 0; i < 500; i++) {
         //     var boxMass = 100;
         //     var boxHalfExtends = new Vector3( 2.5, 2.5, 2.5 );
         //     pos.set( THREEMATH.randFloatSpread(100), THREEMATH.randFloat(10, 100), THREEMATH.randFloatSpread(100) );
