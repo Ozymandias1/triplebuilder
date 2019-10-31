@@ -18,9 +18,11 @@ import {
     Clock,
     Math as THREEMATH,
     Box3,
-    BoxHelper
+    BoxHelper,
+    Plane
 } from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
+import {ConvexObjectBreaker} from 'three/examples/jsm/misc/ConvexObjectBreaker';
 import {FileDragDrop} from './fileDragDrop';
 import {ModelLoader, URLData} from './modelLoader';
 import './ammojsDeclare';
@@ -59,6 +61,8 @@ export class Core {
     // 테스트용 변수
     private savedRigidBody: Array<Ammo.btRigidBody>;
     private savedVelocity: Array<Vector3>;
+    private savedThreeObj: Array<Mesh>;
+    private convexBreaker: ConvexObjectBreaker;
 
     /**
      * 생성자
@@ -118,6 +122,9 @@ export class Core {
         this.control.enableKeys = false;
         this.control.screenSpacePanning = false;
         this.control.rotateSpeed = 0.5;
+
+        // 메시 파괴 유틸
+        this.convexBreaker = new ConvexObjectBreaker();
         
         // 바닥 그리드
         //this.grid = new GridHelper(100, 100, 0xff0000, 0x000000);
@@ -239,6 +246,9 @@ export class Core {
         const btVecUserData = new Ammo.btVector3(0, 0, 0);
         btVecUserData.threeObject = mesh;
         physicsBody.setUserPointer( btVecUserData );
+
+        // 메시 파괴
+        this.convexBreaker.prepareBreakableObject( mesh, mass, new Vector3(), new Vector3(), true);
 
     }
 
@@ -383,6 +393,7 @@ export class Core {
 
         this.savedRigidBody = [];
         this.savedVelocity = [];
+        this.savedThreeObj = [];
 
         const scope = this;
         this.modelLoader.load(option).then( (result: Array<Mesh> ) => {
@@ -395,6 +406,7 @@ export class Core {
                 
                 scope.physicsWorld.removeRigidBody( result[i].userData.physicsBody );
                 scope.savedRigidBody.push(result[i].userData.physicsBody);
+                scope.savedThreeObj.push(result[i]);
 
                 const velocity = result[i].position.clone();
                 velocity.normalize();
@@ -441,14 +453,40 @@ export class Core {
     public test() {
 
         // 모델링 중점 계산
+        // for(let i = 0; i < this.savedRigidBody.length; i++) {
+        //     const rigidBody = this.savedRigidBody[i];
+        //     const velocity = this.savedVelocity[i];
 
-        for(let i = 0; i < this.savedRigidBody.length; i++) {
-            const rigidBody = this.savedRigidBody[i];
-            const velocity = this.savedVelocity[i];
+        //     this.physicsWorld.addRigidBody(rigidBody);
+        //     rigidBody.setLinearVelocity(new Ammo.btVector3(velocity.x, velocity.y, velocity.z));
+        //     rigidBody.setAngularVelocity(new Ammo.btVector3(velocity.x, velocity.y, velocity.z));
+        // }
 
-            this.physicsWorld.addRigidBody(rigidBody);
-            rigidBody.setLinearVelocity(new Ammo.btVector3(velocity.x, velocity.y, velocity.z));
-            rigidBody.setAngularVelocity(new Ammo.btVector3(velocity.x, velocity.y, velocity.z));
+        // 파괴 테스트
+        for(let i = 0; i < 1; i++) {//this.savedThreeObj.length
+            
+            let output = {
+                object1: null,
+                object2: null
+            };
+            const count = this.convexBreaker.cutByPlane(this.savedThreeObj[i], new Plane(new Vector3(1,0,0), 0), output);
+            if( output.object1 ) {
+                this.scene.add(output.object1);
+                output.object1.position.y = 50;
+                output.object1.scale.set(10,10,10);
+
+                const box = new BoxHelper(output.object1, new Color(0xff0000));
+                this.scene.add(box);
+            }
+            if( output.object2 ) {
+                this.scene.add(output.object2);
+                output.object2.position.y = 70;
+                output.object2.scale.set(10,10,10);
+
+                const box = new BoxHelper(output.object2, new Color(0xff0000));
+                this.scene.add(box);
+            }
+            console.log(count, output);
         }
     }
 };
