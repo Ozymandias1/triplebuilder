@@ -52712,6 +52712,7 @@ var Board = /** @class */ (function () {
      */
     function Board(scene) {
         this.scene = scene;
+        this.boards = [];
         // 바닥판 생성
         var geometry = new three_1.BoxBufferGeometry(10, 1, 10, 1, 1, 1);
         var material = new three_1.MeshPhongMaterial({
@@ -52726,6 +52727,7 @@ var Board = /** @class */ (function () {
                 board.castShadow = true;
                 board.receiveShadow = true;
                 this.scene.add(board);
+                this.boards.push(board);
             }
         }
     }
@@ -52824,6 +52826,10 @@ var Core = /** @class */ (function () {
         this.model = new model_1.Model(this.scene);
         // 게임판 인스턴스
         this.board = new board_1.Board(this.scene);
+        // 픽킹요소 초기화
+        this.rayCast = new three_1.Raycaster();
+        this.mousePos = new three_1.Vector2();
+        window.addEventListener('mousemove', this.onMouseMove.bind(this), false);
     }
     /**
      * 창크기변경 이벤트
@@ -52839,7 +52845,21 @@ var Core = /** @class */ (function () {
     Core.prototype.render = function () {
         requestAnimationFrame(this.render.bind(this));
         var deltaTime = this.clock.getDelta();
+        if (this.rayCast) {
+            this.rayCast.setFromCamera(this.mousePos, this.camera);
+            var intersects = this.rayCast.intersectObjects(this.board.boards, true);
+            if (intersects && intersects.length > 0) {
+                intersects[0].object.position.y = 2;
+            }
+        }
         this.renderer.render(this.scene, this.camera);
+    };
+    /**
+     * 마우스 이동
+     */
+    Core.prototype.onMouseMove = function (event) {
+        this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+        this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
     };
     return Core;
 }());

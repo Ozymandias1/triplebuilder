@@ -6,6 +6,7 @@ import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh } from "three";
 export class Board {
 
     private scene: Scene;
+    public boards: Array<Mesh>;
 
     /**
      * 생성자
@@ -13,6 +14,7 @@ export class Board {
     constructor(scene: Scene) {
 
         this.scene = scene;
+        this.boards = [];
  
         // 바닥판 생성
         const geometry = new BoxBufferGeometry(10, 1, 10, 1, 1, 1);
@@ -28,6 +30,8 @@ export class Board {
                 board.castShadow = true;
                 board.receiveShadow = true;
                 this.scene.add(board);
+
+                this.boards.push(board);
             }
         }
         

@@ -1,4 +1,4 @@
-import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneBufferGeometry, Scene, WebGLRenderer } from 'three';
+import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneBufferGeometry, Scene, WebGLRenderer, Raycaster, Vector2 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Board } from './board';
 import { Model } from './model';
@@ -17,8 +17,14 @@ export class Core {
     private hemiLight: HemisphereLight;
     private dirLight: DirectionalLight;
 
+    // 로직
     private model: Model;
     private board: Board;
+
+    // 픽킹
+    private rayCast: Raycaster;
+    private mousePos: Vector2;
+    
 
     /**
      * 생성자
@@ -102,6 +108,11 @@ export class Core {
         this.model = new Model(this.scene);
         // 게임판 인스턴스
         this.board = new Board(this.scene);
+
+        // 픽킹요소 초기화
+        this.rayCast = new Raycaster();
+        this.mousePos = new Vector2();
+        window.addEventListener('mousemove', this.onMouseMove.bind(this), false);
     }
 
     /**
@@ -124,6 +135,24 @@ export class Core {
 
         const deltaTime = this.clock.getDelta();
 
+        if( this.rayCast ) {
+            this.rayCast.setFromCamera( this.mousePos, this.camera );
+            const intersects = this.rayCast.intersectObjects( this.board.boards, true );
+            if( intersects && intersects.length > 0 ) {
+                intersects[0].object.position.y = 2;
+            }
+        }
+
         this.renderer.render(this.scene, this.camera);
+    }
+
+    /**
+     * 마우스 이동
+     */
+    private onMouseMove(event: MouseEvent) {
+
+        this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        this.mousePos.y = -( event.clientY / window.innerHeight ) * 2 + 1;
+
     }
 }
