@@ -10,12 +10,14 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/tween.js": "^17.2.0",
     "ts-loader": "^6.2.1",
     "typescript": "^3.6.4",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10"
   },
   "dependencies": {
+    "@tweenjs/tween.js": "^18.3.2",
     "three": "^0.110.0"
   }
 }

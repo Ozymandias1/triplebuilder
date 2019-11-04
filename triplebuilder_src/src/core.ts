@@ -2,6 +2,7 @@ import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMateria
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Board } from './board';
 import { Model } from './model';
+import * as TWEEN from '@tweenjs/tween.js';
 
 /**
  * 엔진 코어
@@ -134,14 +135,7 @@ export class Core {
         requestAnimationFrame(this.render.bind(this));
 
         const deltaTime = this.clock.getDelta();
-
-        if( this.rayCast ) {
-            this.rayCast.setFromCamera( this.mousePos, this.camera );
-            const intersects = this.rayCast.intersectObjects( this.board.boards, true );
-            if( intersects && intersects.length > 0 ) {
-                intersects[0].object.position.y = 2;
-            }
-        }
+        TWEEN.default.update();
 
         this.renderer.render(this.scene, this.camera);
     }
@@ -153,6 +147,8 @@ export class Core {
 
         this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
         this.mousePos.y = -( event.clientY / window.innerHeight ) * 2 + 1;
+        this.rayCast.setFromCamera( this.mousePos, this.camera );
+        this.board.processPickEvent(this.rayCast);
 
     }
 }
