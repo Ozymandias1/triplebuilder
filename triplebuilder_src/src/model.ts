@@ -2,6 +2,9 @@ import { Mesh, Scene } from "three";
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 
+/**
+ * 모델 관리 클래스
+ */
 export class Model {
 
     private scene: Scene;
@@ -34,7 +37,7 @@ export class Model {
                         function (object) {
                             object.position.x = offset;
                             object.position.z = offset;
-                            object.scale.set(10,10,10);
+                            object.scale.set(8.88,8.88,8.88);
                             offset += 5;
 
                             // 객체 그림자 On

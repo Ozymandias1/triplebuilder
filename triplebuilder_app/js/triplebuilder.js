@@ -52692,6 +52692,50 @@ var OBJLoader = ( function () {
 
 /***/ }),
 
+/***/ "./src/board.ts":
+/*!**********************!*\
+  !*** ./src/board.ts ***!
+  \**********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/**
+ * 게임판 관리 클래스
+ */
+var Board = /** @class */ (function () {
+    /**
+     * 생성자
+     */
+    function Board(scene) {
+        this.scene = scene;
+        // 바닥판 생성
+        var geometry = new three_1.BoxBufferGeometry(10, 1, 10, 1, 1, 1);
+        var material = new three_1.MeshPhongMaterial({
+            color: 0xcccccc
+        });
+        // 10x10 보드 생성
+        for (var h = 0; h < 10; h++) {
+            for (var w = 0; w < 10; w++) {
+                var board = new three_1.Mesh(geometry, material);
+                board.position.x = w * 10;
+                board.position.z = h * 10;
+                board.castShadow = true;
+                board.receiveShadow = true;
+                this.scene.add(board);
+            }
+        }
+    }
+    return Board;
+}());
+exports.Board = Board;
+
+
+/***/ }),
+
 /***/ "./src/core.ts":
 /*!*********************!*\
   !*** ./src/core.ts ***!
@@ -52704,6 +52748,7 @@ var OBJLoader = ( function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var OrbitControls_1 = __webpack_require__(/*! three/examples/jsm/controls/OrbitControls */ "./node_modules/three/examples/jsm/controls/OrbitControls.js");
+var board_1 = __webpack_require__(/*! ./board */ "./src/board.ts");
 var model_1 = __webpack_require__(/*! ./model */ "./src/model.ts");
 /**
  * 엔진 코어
@@ -52763,20 +52808,22 @@ var Core = /** @class */ (function () {
         // // 바닥 그리드
         // const grid = new GridHelper(100, 100, 0xff0000, 0x000000);
         // this.scene.add(grid);
-        // 바닥
-        var groundGeometry = new three_1.PlaneBufferGeometry(100, 100, 1, 1);
-        groundGeometry.rotateX(Math.PI * -0.5);
-        var groundMaterial = new three_1.MeshPhongMaterial({ color: 0xcccccc });
-        var ground = new three_1.Mesh(groundGeometry, groundMaterial);
-        ground.castShadow = false;
-        ground.receiveShadow = true;
-        this.scene.add(ground);
+        // // 바닥
+        // const groundGeometry = new PlaneBufferGeometry(100, 100, 1, 1);
+        // groundGeometry.rotateX(Math.PI * -0.5);
+        // const groundMaterial = new MeshPhongMaterial({color: 0xcccccc});
+        // const ground = new Mesh(groundGeometry, groundMaterial);
+        // ground.castShadow = false;
+        // ground.receiveShadow = true;
+        // this.scene.add(ground);
         // 창크기변경 이벤트 등록
         window.addEventListener('resize', this.onResize.bind(this), false);
         // 렌더링 루프 시작
         this.render();
         // 모델 인스턴스
         this.model = new model_1.Model(this.scene);
+        // 게임판 인스턴스
+        this.board = new board_1.Board(this.scene);
     }
     /**
      * 창크기변경 이벤트
@@ -52830,6 +52877,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var MTLLoader_1 = __webpack_require__(/*! three/examples/jsm/loaders/MTLLoader */ "./node_modules/three/examples/jsm/loaders/MTLLoader.js");
 var OBJLoader_1 = __webpack_require__(/*! three/examples/jsm/loaders/OBJLoader */ "./node_modules/three/examples/jsm/loaders/OBJLoader.js");
+/**
+ * 모델 관리 클래스
+ */
 var Model = /** @class */ (function () {
     /**
      * 생성자
@@ -52851,7 +52901,7 @@ var Model = /** @class */ (function () {
                 new OBJLoader_1.OBJLoader().setMaterials(materials).load(url, function (object) {
                     object.position.x = offset;
                     object.position.z = offset;
-                    object.scale.set(10, 10, 10);
+                    object.scale.set(8.88, 8.88, 8.88);
                     offset += 5;
                     // 객체 그림자 On
                     object.traverse(function (child) {
