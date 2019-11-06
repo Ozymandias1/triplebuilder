@@ -53872,6 +53872,8 @@ var OBJLoader = ( function () {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var Tile = /** @class */ (function () {
     function Tile(w, h, level) {
         this.tileW = w;
@@ -53890,9 +53892,15 @@ var Board = /** @class */ (function () {
     function Board(scene, modelMgr) {
         this.scene = scene;
         this.modelMgr = modelMgr;
-        // this.boards = [];
-        // this.prevPickObject = null;
         this.tileSize = 10;
+        this.plates = [];
+        this.prevPickPlate = null;
+        this.matSelect = new three_1.MeshPhongMaterial({ color: 0xffff00 });
+        this.matNormal = new three_1.MeshPhongMaterial({ color: 0xcccccc });
+        // 픽킹용 바닥판
+        var geometry = new three_1.BoxBufferGeometry(this.tileSize, 1, this.tileSize, 1, 1, 1);
+        var material = new three_1.MeshBasicMaterial();
+        this.plateBase = new three_1.Mesh(geometry, material);
         // // 바닥판 생성
         // const geometry = new BoxBufferGeometry(this.tileSize, 1, this.tileSize, 1, 1, 1);
         // const material = new MeshPhongMaterial({
@@ -53929,6 +53937,77 @@ var Board = /** @class */ (function () {
             this.map[w] = [];
             for (var h = 0; h < height; h++) {
                 this.map[w][h] = new Tile(w, h, 0);
+            }
+        }
+        // 레벨에 따른 메시 생성
+        for (var w = 0; w < width; w++) {
+            for (var h = 0; h < height; h++) {
+                var mapData = this.map[w][h];
+                var model = this.modelMgr.getModelByLevelNumber(mapData.level);
+                if (model) {
+                    mapData.object = model.clone();
+                    mapData.object.position.x = w * this.tileSize;
+                    mapData.object.position.z = h * this.tileSize;
+                    this.scene.add(mapData.object);
+                    // 픽킹용 패널
+                    var plate = this.plateBase.clone();
+                    plate.name = w + '_' + h + '/plate';
+                    plate.position.copy(mapData.object.position);
+                    plate.updateMatrixWorld(true);
+                    plate.userData['linkedTile'] = mapData.object;
+                    this.plates.push(plate);
+                }
+            }
+        }
+    };
+    /**
+     * 픽킹 이벤트 처리
+     */
+    Board.prototype.processPickEvent = function (rayCast) {
+        var intersects = rayCast.intersectObjects(this.plates);
+        if (intersects && intersects.length > 0) {
+            if (this.prevPickPlate && this.prevPickPlate.uuid === intersects[0].object.uuid) {
+            }
+            else {
+                // 이전객체 위치 되돌림
+                if (this.prevPickPlate) {
+                    var plateTarget = this.prevPickPlate.userData['linkedTile'];
+                    new TWEEN.default.Tween(plateTarget.position)
+                        .to({
+                        y: 0
+                    }, 100)
+                        .easing(TWEEN.default.Easing.Quadratic.Out)
+                        .start();
+                    plateTarget.material = this.matNormal;
+                    this.prevPickPlate = null;
+                }
+                var target_1 = intersects[0].object.userData['linkedTile'];
+                var tweenData = { ratio: 0.0 };
+                new TWEEN.default.Tween(tweenData)
+                    .to({
+                    ratio: 1.0
+                }, 100)
+                    .easing(TWEEN.default.Easing.Quadratic.Out)
+                    .onUpdate(function (data) {
+                    target_1.position.y = data.ratio;
+                })
+                    .start();
+                target_1.material = this.matSelect;
+                this.prevPickPlate = intersects[0].object;
+            }
+        }
+        else {
+            // 이전객체 위치 되돌림
+            if (this.prevPickPlate) {
+                var plateTarget = this.prevPickPlate.userData['linkedTile'];
+                new TWEEN.default.Tween(plateTarget.position)
+                    .to({
+                    y: 0
+                }, 100)
+                    .easing(TWEEN.default.Easing.Quadratic.Out)
+                    .start();
+                plateTarget.material = this.matNormal;
+                this.prevPickPlate = null;
             }
         }
     };
@@ -54057,7 +54136,7 @@ var Core = /** @class */ (function () {
         this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
         this.rayCast.setFromCamera(this.mousePos, this.camera);
-        //this.board.processPickEvent(this.rayCast);
+        this.board.processPickEvent(this.rayCast);
     };
     return Core;
 }());
@@ -54111,6 +54190,8 @@ var ModelManager = /** @class */ (function () {
             color: 0xcccccc
         });
         var mesh = new three_1.Mesh(geometry, material);
+        // mesh.castShadow = true;
+        mesh.receiveShadow = true;
         this.models['level0'] = mesh;
         // 기본 모델들 로드
         var scope = this;
@@ -54150,6 +54231,19 @@ var ModelManager = /** @class */ (function () {
             }
         });
     }
+    /**
+     * 레벨번호에 해당하는 모델을 반환
+     * @param levelNo 레벨 번호
+     */
+    ModelManager.prototype.getModelByLevelNumber = function (levelNo) {
+        var key = 'level' + levelNo;
+        if (this.models.hasOwnProperty(key)) {
+            return this.models[key];
+        }
+        else {
+            return null;
+        }
+    };
     return ModelManager;
 }());
 exports.ModelManager = ModelManager;

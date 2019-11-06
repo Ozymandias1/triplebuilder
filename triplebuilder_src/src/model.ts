@@ -24,6 +24,8 @@ export class ModelManager {
             color: 0xcccccc
         });
         const mesh = new Mesh(geometry, material);
+        // mesh.castShadow = true;
+        mesh.receiveShadow = true;
         this.models['level0'] = mesh;
         
 
@@ -80,6 +82,21 @@ export class ModelManager {
                 }
             }
         );
+
+    }
+
+    /**
+     * 레벨번호에 해당하는 모델을 반환
+     * @param levelNo 레벨 번호
+     */
+    getModelByLevelNumber(levelNo: number) {
+
+        const key = 'level' + levelNo;
+        if( this.models.hasOwnProperty(key) ) {
+            return this.models[key];
+        } else {
+            return null;
+        }
 
     }
 }

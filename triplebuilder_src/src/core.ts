@@ -148,7 +148,7 @@ export class Core {
         this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
         this.mousePos.y = -( event.clientY / window.innerHeight ) * 2 + 1;
         this.rayCast.setFromCamera( this.mousePos, this.camera );
-        //this.board.processPickEvent(this.rayCast);
+        this.board.processPickEvent(this.rayCast);
 
     }
 }
