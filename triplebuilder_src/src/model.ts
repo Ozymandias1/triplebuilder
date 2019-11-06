@@ -1,13 +1,14 @@
-import { Mesh, Scene } from "three";
+import { Mesh, Scene, BoxBufferGeometry, MeshPhongMaterial, StringKeyframeTrack, Object3D } from "three";
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 
 /**
  * 모델 관리 클래스
  */
-export class Model {
+export class ModelManager {
 
     private scene: Scene;
+    private models: Record<string, Object3D>;
 
     /**
      * 생성자
@@ -15,13 +16,23 @@ export class Model {
     constructor(scene: Scene) {
 
         this.scene = scene;
+        this.models = {};
+
+        // 기본판
+        const geometry = new BoxBufferGeometry(10, 1, 10, 1, 1, 1);
+        const material = new MeshPhongMaterial({
+            color: 0xcccccc
+        });
+        const mesh = new Mesh(geometry, material);
+        this.models['basic'] = mesh;
+        
 
         // 기본 모델들 로드
         const scope = this;
         const objUrls = [
-            'models/Level0.obj',
-            'models/Level1.obj',
-            'models/Level2.obj'
+            { key: 'level0', url: 'models/Level0.obj'},
+            { key: 'level1', url: 'models/Level1.obj'},
+            { key: 'level2', url: 'models/Level2.obj'}
         ];
         let offset = 0;
         new MTLLoader().load(
@@ -30,10 +41,9 @@ export class Model {
 
                 materials.preload();
 
-                objUrls.forEach(url => {
-                    // Level0
+                objUrls.forEach( (element, index) => {
                     new OBJLoader().setMaterials(materials).load(
-                        url,
+                        element.url,
                         function (object) {
                             object.position.x = offset;
                             object.position.z = offset;
@@ -49,6 +59,9 @@ export class Model {
                             });
 
                             scope.scene.add(object);
+
+                            // 모델 스토리지에 저장
+                            scope.models[element.key] = object;
                         },
                         function (progress){},
                         function(err){

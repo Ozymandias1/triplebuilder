@@ -1,7 +1,7 @@
 import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneBufferGeometry, Scene, WebGLRenderer, Raycaster, Vector2 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Board } from './board';
-import { Model } from './model';
+import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
 
 /**
@@ -19,7 +19,7 @@ export class Core {
     private dirLight: DirectionalLight;
 
     // 로직
-    private model: Model;
+    private model: ModelManager;
     private board: Board;
 
     // 픽킹
@@ -106,9 +106,9 @@ export class Core {
         this.render();
 
         // 모델 인스턴스
-        this.model = new Model(this.scene);
+        this.model = new ModelManager(this.scene);
         // 게임판 인스턴스
-        this.board = new Board(this.scene);
+        this.board = new Board(this.scene, this.model);
 
         // 픽킹요소 초기화
         this.rayCast = new Raycaster();
@@ -148,7 +148,7 @@ export class Core {
         this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
         this.mousePos.y = -( event.clientY / window.innerHeight ) * 2 + 1;
         this.rayCast.setFromCamera( this.mousePos, this.camera );
-        this.board.processPickEvent(this.rayCast);
+        //this.board.processPickEvent(this.rayCast);
 
     }
 }

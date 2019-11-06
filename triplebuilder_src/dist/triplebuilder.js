@@ -53872,8 +53872,13 @@ var OBJLoader = ( function () {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
+var Tile = /** @class */ (function () {
+    function Tile(w, h) {
+        this.tileW = w;
+        this.tileH = h;
+    }
+    return Tile;
+}());
 /**
  * 게임판 관리 클래스
  */
@@ -53881,59 +53886,49 @@ var Board = /** @class */ (function () {
     /**
      * 생성자
      */
-    function Board(scene) {
+    function Board(scene, modelMgr) {
         this.scene = scene;
-        this.boards = [];
-        this.prevPickObject = null;
-        // 바닥판 생성
-        var geometry = new three_1.BoxBufferGeometry(10, 1, 10, 1, 1, 1);
-        var material = new three_1.MeshPhongMaterial({
-            color: 0xcccccc
-        });
-        // 10x10 보드 생성
-        for (var h = 0; h < 10; h++) {
-            for (var w = 0; w < 10; w++) {
-                var board = new three_1.Mesh(geometry, material);
-                board.name = w + '_' + h + '/board';
-                board.position.x = w * 10;
-                board.position.z = h * 10;
-                board.castShadow = true;
-                board.receiveShadow = true;
-                this.scene.add(board);
-                var plate = board.clone();
-                plate.name = w + '_' + h + '/plate';
-                plate.position.copy(board.position);
-                plate.updateMatrixWorld(true);
-                plate.userData['sourceObject'] = board;
-                this.boards.push(plate);
-            }
-        }
+        this.modelMgr = modelMgr;
+        // this.boards = [];
+        // this.prevPickObject = null;
+        this.tileSize = 10;
+        // // 바닥판 생성
+        // const geometry = new BoxBufferGeometry(this.tileSize, 1, this.tileSize, 1, 1, 1);
+        // const material = new MeshPhongMaterial({
+        //     color: 0xcccccc
+        // });
+        // // 10x10 보드 생성
+        // for(let h = 0; h < 10; h++) {
+        //     for(let w = 0; w < 10; w++) {
+        //         const board = new Mesh(geometry, material);
+        //         board.name = w + '_' + h + '/board';
+        //         board.position.x = w * this.tileSize;
+        //         board.position.z = h * this.tileSize;
+        //         board.castShadow = true;
+        //         board.receiveShadow = true;
+        //         this.scene.add(board);
+        //         const plate = board.clone();
+        //         plate.name = w + '_' + h + '/plate';
+        //         plate.position.copy(board.position);
+        //         plate.updateMatrixWorld(true);
+        //         plate.userData['sourceObject'] = board;
+        //         this.boards.push(plate);
+        //     }
+        // }
     }
     /**
-     * 픽킹 이벤트 처리
+     * 맵 생성
+     * @param width 맵 가로 타일개수
+     * @param height 맵 세로 타일개수
      */
-    Board.prototype.processPickEvent = function (rayCast) {
-        var intersects = rayCast.intersectObjects(this.boards);
-        if (intersects && intersects.length > 0) {
-            // 이전객체 위치 되돌림
-            if (this.prevPickObject) {
-                new TWEEN.default.Tween(this.prevPickObject.position)
-                    .to({
-                    y: 0
-                }, 100)
-                    .easing(TWEEN.default.Easing.Quadratic.Out)
-                    .start();
-                this.prevPickObject = null;
+    Board.prototype.createMap = function (width, height) {
+        // 가로세로 개수만큼 초기화
+        this.map = [];
+        for (var w = 0; w < width; w++) {
+            this.map[w] = [];
+            for (var h = 0; h < height; h++) {
+                this.map[w][h] = new Tile(w, h);
             }
-            var target = intersects[0].object.userData['sourceObject'];
-            // target.position.y = 1;
-            new TWEEN.default.Tween(target.position)
-                .to({
-                y: 1
-            }, 100)
-                .easing(TWEEN.default.Easing.Quadratic.Out)
-                .start();
-            this.prevPickObject = target;
         }
     };
     return Board;
@@ -54029,9 +54024,9 @@ var Core = /** @class */ (function () {
         // 렌더링 루프 시작
         this.render();
         // 모델 인스턴스
-        this.model = new model_1.Model(this.scene);
+        this.model = new model_1.ModelManager(this.scene);
         // 게임판 인스턴스
-        this.board = new board_1.Board(this.scene);
+        this.board = new board_1.Board(this.scene, this.model);
         // 픽킹요소 초기화
         this.rayCast = new three_1.Raycaster();
         this.mousePos = new three_1.Vector2();
@@ -54061,7 +54056,7 @@ var Core = /** @class */ (function () {
         this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
         this.rayCast.setFromCamera(this.mousePos, this.camera);
-        this.board.processPickEvent(this.rayCast);
+        //this.board.processPickEvent(this.rayCast);
     };
     return Core;
 }());
@@ -54102,25 +54097,32 @@ var OBJLoader_1 = __webpack_require__(/*! three/examples/jsm/loaders/OBJLoader *
 /**
  * 모델 관리 클래스
  */
-var Model = /** @class */ (function () {
+var ModelManager = /** @class */ (function () {
     /**
      * 생성자
      */
-    function Model(scene) {
+    function ModelManager(scene) {
         this.scene = scene;
+        this.models = {};
+        // 기본판
+        var geometry = new three_1.BoxBufferGeometry(10, 1, 10, 1, 1, 1);
+        var material = new three_1.MeshPhongMaterial({
+            color: 0xcccccc
+        });
+        var mesh = new three_1.Mesh(geometry, material);
+        this.models['basic'] = mesh;
         // 기본 모델들 로드
         var scope = this;
         var objUrls = [
-            'models/Level0.obj',
-            'models/Level1.obj',
-            'models/Level2.obj'
+            { key: 'level0', url: 'models/Level0.obj' },
+            { key: 'level1', url: 'models/Level1.obj' },
+            { key: 'level2', url: 'models/Level2.obj' }
         ];
         var offset = 0;
         new MTLLoader_1.MTLLoader().load('models/materials.mtl', function (materials) {
             materials.preload();
-            objUrls.forEach(function (url) {
-                // Level0
-                new OBJLoader_1.OBJLoader().setMaterials(materials).load(url, function (object) {
+            objUrls.forEach(function (element, index) {
+                new OBJLoader_1.OBJLoader().setMaterials(materials).load(element.url, function (object) {
                     object.position.x = offset;
                     object.position.z = offset;
                     object.scale.set(8.88, 8.88, 8.88);
@@ -54133,6 +54135,8 @@ var Model = /** @class */ (function () {
                         }
                     });
                     scope.scene.add(object);
+                    // 모델 스토리지에 저장
+                    scope.models[element.key] = object;
                 }, function (progress) { }, function (err) {
                     if (err) {
                         console.error(err);
@@ -54145,9 +54149,9 @@ var Model = /** @class */ (function () {
             }
         });
     }
-    return Model;
+    return ModelManager;
 }());
-exports.Model = Model;
+exports.ModelManager = ModelManager;
 
 
 /***/ }),
