@@ -6,11 +6,13 @@ class Tile {
     public object: Object3D;
     public tileW: number;
     public tileH: number;
+    public level: number;
 
-    constructor(w: number, h: number) {
+    constructor(w: number, h: number, level: number) {
 
         this.tileW = w;
         this.tileH = h;
+        this.level = level;
     }
 }
 
@@ -77,7 +79,7 @@ export class Board {
         for(let w = 0; w < width; w++) {
             this.map[w] = [];
             for(let h = 0; h < height; h++) {
-                this.map[w][h] = new Tile(w, h);
+                this.map[w][h] = new Tile(w, h, 0);
             }
         }
 

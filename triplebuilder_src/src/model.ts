@@ -24,15 +24,15 @@ export class ModelManager {
             color: 0xcccccc
         });
         const mesh = new Mesh(geometry, material);
-        this.models['basic'] = mesh;
+        this.models['level0'] = mesh;
         
 
         // 기본 모델들 로드
         const scope = this;
         const objUrls = [
-            { key: 'level0', url: 'models/Level0.obj'},
             { key: 'level1', url: 'models/Level1.obj'},
-            { key: 'level2', url: 'models/Level2.obj'}
+            { key: 'level2', url: 'models/Level2.obj'},
+            { key: 'level3', url: 'models/Level3.obj'}
         ];
         let offset = 0;
         new MTLLoader().load(

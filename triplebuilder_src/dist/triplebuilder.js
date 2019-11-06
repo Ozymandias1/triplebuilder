@@ -53873,9 +53873,10 @@ var OBJLoader = ( function () {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var Tile = /** @class */ (function () {
-    function Tile(w, h) {
+    function Tile(w, h, level) {
         this.tileW = w;
         this.tileH = h;
+        this.level = level;
     }
     return Tile;
 }());
@@ -53927,7 +53928,7 @@ var Board = /** @class */ (function () {
         for (var w = 0; w < width; w++) {
             this.map[w] = [];
             for (var h = 0; h < height; h++) {
-                this.map[w][h] = new Tile(w, h);
+                this.map[w][h] = new Tile(w, h, 0);
             }
         }
     };
@@ -54110,13 +54111,13 @@ var ModelManager = /** @class */ (function () {
             color: 0xcccccc
         });
         var mesh = new three_1.Mesh(geometry, material);
-        this.models['basic'] = mesh;
+        this.models['level0'] = mesh;
         // 기본 모델들 로드
         var scope = this;
         var objUrls = [
-            { key: 'level0', url: 'models/Level0.obj' },
             { key: 'level1', url: 'models/Level1.obj' },
-            { key: 'level2', url: 'models/Level2.obj' }
+            { key: 'level2', url: 'models/Level2.obj' },
+            { key: 'level3', url: 'models/Level3.obj' }
         ];
         var offset = 0;
         new MTLLoader_1.MTLLoader().load('models/materials.mtl', function (materials) {
