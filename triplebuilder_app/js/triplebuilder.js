@@ -53873,7 +53873,6 @@ var OBJLoader = ( function () {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var Tile = /** @class */ (function () {
     function Tile(w, h, level) {
         this.tileW = w;
@@ -53882,6 +53881,7 @@ var Tile = /** @class */ (function () {
     }
     return Tile;
 }());
+exports.Tile = Tile;
 /**
  * 게임판 관리 클래스
  */
@@ -53954,60 +53954,9 @@ var Board = /** @class */ (function () {
                     plate.name = w + '_' + h + '/plate';
                     plate.position.copy(mapData.object.position);
                     plate.updateMatrixWorld(true);
-                    plate.userData['linkedTile'] = mapData.object;
+                    plate.userData['linkedTile'] = mapData;
                     this.plates.push(plate);
                 }
-            }
-        }
-    };
-    /**
-     * 픽킹 이벤트 처리
-     */
-    Board.prototype.processPickEvent = function (rayCast) {
-        var intersects = rayCast.intersectObjects(this.plates);
-        if (intersects && intersects.length > 0) {
-            if (this.prevPickPlate && this.prevPickPlate.uuid === intersects[0].object.uuid) {
-            }
-            else {
-                // 이전객체 위치 되돌림
-                if (this.prevPickPlate) {
-                    var plateTarget = this.prevPickPlate.userData['linkedTile'];
-                    new TWEEN.default.Tween(plateTarget.position)
-                        .to({
-                        y: 0
-                    }, 100)
-                        .easing(TWEEN.default.Easing.Quadratic.Out)
-                        .start();
-                    plateTarget.material = this.matNormal;
-                    this.prevPickPlate = null;
-                }
-                var target_1 = intersects[0].object.userData['linkedTile'];
-                var tweenData = { ratio: 0.0 };
-                new TWEEN.default.Tween(tweenData)
-                    .to({
-                    ratio: 1.0
-                }, 100)
-                    .easing(TWEEN.default.Easing.Quadratic.Out)
-                    .onUpdate(function (data) {
-                    target_1.position.y = data.ratio;
-                })
-                    .start();
-                target_1.material = this.matSelect;
-                this.prevPickPlate = intersects[0].object;
-            }
-        }
-        else {
-            // 이전객체 위치 되돌림
-            if (this.prevPickPlate) {
-                var plateTarget = this.prevPickPlate.userData['linkedTile'];
-                new TWEEN.default.Tween(plateTarget.position)
-                    .to({
-                    y: 0
-                }, 100)
-                    .easing(TWEEN.default.Easing.Quadratic.Out)
-                    .start();
-                plateTarget.material = this.matNormal;
-                this.prevPickPlate = null;
             }
         }
     };
@@ -54032,6 +53981,7 @@ var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three
 var OrbitControls_1 = __webpack_require__(/*! three/examples/jsm/controls/OrbitControls */ "./node_modules/three/examples/jsm/controls/OrbitControls.js");
 var board_1 = __webpack_require__(/*! ./board */ "./src/board.ts");
 var model_1 = __webpack_require__(/*! ./model */ "./src/model.ts");
+var gamelogic_1 = __webpack_require__(/*! ./gamelogic */ "./src/gamelogic.ts");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 /**
  * 엔진 코어
@@ -54107,10 +54057,8 @@ var Core = /** @class */ (function () {
         this.model = new model_1.ModelManager(this.scene);
         // 게임판 인스턴스
         this.board = new board_1.Board(this.scene, this.model);
-        // 픽킹요소 초기화
-        this.rayCast = new three_1.Raycaster();
-        this.mousePos = new three_1.Vector2();
-        window.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+        // 게임로직
+        this.gameLogic = new gamelogic_1.GameLogic(this.scene, this.camera, this.board, this.model);
     }
     /**
      * 창크기변경 이벤트
@@ -54128,15 +54076,6 @@ var Core = /** @class */ (function () {
         var deltaTime = this.clock.getDelta();
         TWEEN.default.update();
         this.renderer.render(this.scene, this.camera);
-    };
-    /**
-     * 마우스 이동
-     */
-    Core.prototype.onMouseMove = function (event) {
-        this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
-        this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        this.rayCast.setFromCamera(this.mousePos, this.camera);
-        this.board.processPickEvent(this.rayCast);
     };
     return Core;
 }());
@@ -54157,6 +54096,86 @@ exports.Core = Core;
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(/*! ./core */ "./src/core.ts");
 exports.Core = core_1.Core;
+
+
+/***/ }),
+
+/***/ "./src/gamelogic.ts":
+/*!**************************!*\
+  !*** ./src/gamelogic.ts ***!
+  \**************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var GameLogic = /** @class */ (function () {
+    function GameLogic(scene, camera, board, modelMgr) {
+        this.scene = scene;
+        this.camera = camera;
+        this.board = board;
+        this.modelMgr = modelMgr;
+        // 픽킹요소 초기화
+        this.rayCast = new three_1.Raycaster();
+        this.mousePos = new three_1.Vector2();
+        window.addEventListener('pointermove', this.onPointerMove.bind(this), false);
+    }
+    /**
+     * 마우스 픽킹 이벤트 처리
+     */
+    GameLogic.prototype.onPointerMove = function (event) {
+        this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+        this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        this.rayCast.setFromCamera(this.mousePos, this.camera);
+        // 보드판에 픽킹 처리를 한다.
+        var intersects = this.rayCast.intersectObjects(this.board.plates);
+        if (intersects && intersects.length > 0) {
+            var pickObject = intersects[0].object;
+            var tile = pickObject.userData['linkedTile'];
+            if (tile) {
+                if (this.cursor) {
+                    this.cursor.position.copy(tile.object.position);
+                    console.log('gamelogic.ts onPointerMove called.');
+                }
+            }
+        }
+    };
+    GameLogic.prototype.createCursor = function () {
+        var _this = this;
+        var sourceObject = this.modelMgr.getModelByLevel(three_1.Math.randInt(1, 3));
+        // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
+        if (sourceObject) {
+            this.disposeCursor();
+            this.cursor = new three_1.Object3D();
+            this.cursor.name = 'Cursor';
+            sourceObject.traverse(function (child) {
+                if (child instanceof three_1.Mesh) {
+                    var edgeGeometry = new three_1.EdgesGeometry(child.geometry);
+                    var edgeMaterial = new three_1.LineBasicMaterial({ color: 0x000000 });
+                    var edge = new three_1.LineSegments(edgeGeometry, edgeMaterial);
+                    _this.cursor.add(edge);
+                }
+            });
+            this.scene.add(this.cursor);
+            this.cursor.userData['sourceObject'] = sourceObject;
+        }
+    };
+    GameLogic.prototype.disposeCursor = function () {
+        if (this.cursor) {
+            this.scene.remove(this.cursor);
+            for (var i = 0; i < this.cursor.children.length; i++) {
+                var child = this.cursor.children[i];
+                child.geometry.dispose();
+                child.material.dispose();
+            }
+            this.cursor = null;
+        }
+    };
+    return GameLogic;
+}());
+exports.GameLogic = GameLogic;
 
 
 /***/ }),
@@ -54200,23 +54219,24 @@ var ModelManager = /** @class */ (function () {
             { key: 'level2', url: 'models/Level2.obj' },
             { key: 'level3', url: 'models/Level3.obj' }
         ];
-        var offset = 0;
+        // let offset = 0;
         new MTLLoader_1.MTLLoader().load('models/materials.mtl', function (materials) {
             materials.preload();
             objUrls.forEach(function (element, index) {
                 new OBJLoader_1.OBJLoader().setMaterials(materials).load(element.url, function (object) {
-                    object.position.x = offset;
-                    object.position.z = offset;
-                    object.scale.set(8.88, 8.88, 8.88);
-                    offset += 5;
+                    // object.position.x = offset;
+                    // object.position.z = offset;
+                    // object.scale.set(8.88,8.88,8.88);
+                    // offset += 5;
                     // 객체 그림자 On
                     object.traverse(function (child) {
                         if (child instanceof three_1.Mesh) {
+                            child.geometry.scale(8.88, 8.88, 8.88);
                             child.castShadow = true;
                             child.receiveShadow = true;
                         }
                     });
-                    scope.scene.add(object);
+                    //scope.scene.add(object);
                     // 모델 스토리지에 저장
                     scope.models[element.key] = object;
                 }, function (progress) { }, function (err) {
@@ -54243,6 +54263,13 @@ var ModelManager = /** @class */ (function () {
         else {
             return null;
         }
+    };
+    ModelManager.prototype.getModelByLevel = function (level) {
+        var key = 'level' + level;
+        if (this.models.hasOwnProperty(key)) {
+            return this.models[key];
+        }
+        return null;
     };
     return ModelManager;
 }());

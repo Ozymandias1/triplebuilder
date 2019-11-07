@@ -36,7 +36,7 @@ export class ModelManager {
             { key: 'level2', url: 'models/Level2.obj'},
             { key: 'level3', url: 'models/Level3.obj'}
         ];
-        let offset = 0;
+        // let offset = 0;
         new MTLLoader().load(
             'models/materials.mtl',
             function( materials ) {
@@ -47,20 +47,21 @@ export class ModelManager {
                     new OBJLoader().setMaterials(materials).load(
                         element.url,
                         function (object) {
-                            object.position.x = offset;
-                            object.position.z = offset;
-                            object.scale.set(8.88,8.88,8.88);
-                            offset += 5;
+                            // object.position.x = offset;
+                            // object.position.z = offset;
+                            // object.scale.set(8.88,8.88,8.88);
+                            // offset += 5;
 
                             // 객체 그림자 On
                             object.traverse( child => {
                                 if( child instanceof Mesh ) {
+                                    child.geometry.scale(8.88,8.88,8.88);
                                     child.castShadow = true;
                                     child.receiveShadow = true;
                                 }
                             });
 
-                            scope.scene.add(object);
+                            //scope.scene.add(object);
 
                             // 모델 스토리지에 저장
                             scope.models[element.key] = object;
@@ -98,5 +99,14 @@ export class ModelManager {
             return null;
         }
 
+    }
+
+    getModelByLevel(level: number) {
+        const key = 'level' + level;
+        if( this.models.hasOwnProperty(key) ) {
+            return this.models[key];
+        }
+
+        return null;
     }
 }

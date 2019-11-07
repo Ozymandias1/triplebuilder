@@ -2,7 +2,7 @@ import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D,
 import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
 
-class Tile {
+export class Tile {
     public object: Object3D;
     public tileW: number;
     public tileH: number;
@@ -25,11 +25,12 @@ export class Board {
     private modelMgr: ModelManager;
     private tileSize: number;
     private map: Tile[][];
-    private plates: Mesh[];
     private plateBase: Mesh;
     private prevPickPlate: Object3D;
     private matSelect: MeshPhongMaterial;
     private matNormal: MeshPhongMaterial;
+    
+    public plates: Mesh[];
 
     /**
      * 생성자
@@ -109,7 +110,7 @@ export class Board {
                     plate.name = w + '_' + h + '/plate';
                     plate.position.copy(mapData.object.position);
                     plate.updateMatrixWorld(true);
-                    plate.userData['linkedTile'] = mapData.object;
+                    plate.userData['linkedTile'] = mapData;
                     this.plates.push(plate);
                 }
             }
@@ -117,60 +118,60 @@ export class Board {
 
     }
 
-    /**
-     * 픽킹 이벤트 처리
-     */
-    public processPickEvent(rayCast: Raycaster) {
+    // /**
+    //  * 픽킹 이벤트 처리
+    //  */
+    // public processPickEvent(rayCast: Raycaster) {
 
-        const intersects = rayCast.intersectObjects(this.plates);
-        if( intersects && intersects.length > 0 ) {
+    //     const intersects = rayCast.intersectObjects(this.plates);
+    //     if( intersects && intersects.length > 0 ) {
 
-            if( this.prevPickPlate && this.prevPickPlate.uuid === intersects[0].object.uuid ) {
+    //         if( this.prevPickPlate && this.prevPickPlate.uuid === intersects[0].object.uuid ) {
 
-            } else {
-                // 이전객체 위치 되돌림
-                if( this.prevPickPlate ){
-                    const plateTarget = this.prevPickPlate.userData['linkedTile'];
-                    new TWEEN.default.Tween(plateTarget.position)
-                    .to({
-                        y: 0
-                    }, 100)
-                    .easing(TWEEN.default.Easing.Quadratic.Out)
-                    .start();
-                    plateTarget.material = this.matNormal;
-                    this.prevPickPlate = null;
-                }
+    //         } else {
+    //             // 이전객체 위치 되돌림
+    //             if( this.prevPickPlate ){
+    //                 const plateTarget = this.prevPickPlate.userData['linkedTile'];
+    //                 new TWEEN.default.Tween(plateTarget.position)
+    //                 .to({
+    //                     y: 0
+    //                 }, 100)
+    //                 .easing(TWEEN.default.Easing.Quadratic.Out)
+    //                 .start();
+    //                 plateTarget.material = this.matNormal;
+    //                 this.prevPickPlate = null;
+    //             }
     
-                const target = intersects[0].object.userData['linkedTile'];
+    //             const target = intersects[0].object.userData['linkedTile'];
     
-                const tweenData = { ratio: 0.0 };
-                new TWEEN.default.Tween(tweenData)
-                .to({
-                    ratio: 1.0
-                }, 100)
-                .easing(TWEEN.default.Easing.Quadratic.Out)
-                .onUpdate((data: any) =>{
-                    target.position.y = data.ratio;
-                })
-                .start();
-                target.material = this.matSelect;
+    //             const tweenData = { ratio: 0.0 };
+    //             new TWEEN.default.Tween(tweenData)
+    //             .to({
+    //                 ratio: 1.0
+    //             }, 100)
+    //             .easing(TWEEN.default.Easing.Quadratic.Out)
+    //             .onUpdate((data: any) =>{
+    //                 target.position.y = data.ratio;
+    //             })
+    //             .start();
+    //             target.material = this.matSelect;
 
-                this.prevPickPlate = intersects[0].object;
-            }
-        } else {
-            // 이전객체 위치 되돌림
-            if( this.prevPickPlate ){
-                const plateTarget = this.prevPickPlate.userData['linkedTile'];
-                new TWEEN.default.Tween(plateTarget.position)
-                .to({
-                    y: 0
-                }, 100)
-                .easing(TWEEN.default.Easing.Quadratic.Out)
-                .start();
-                plateTarget.material = this.matNormal;
-                this.prevPickPlate = null;
-            }
-        }
+    //             this.prevPickPlate = intersects[0].object;
+    //         }
+    //     } else {
+    //         // 이전객체 위치 되돌림
+    //         if( this.prevPickPlate ){
+    //             const plateTarget = this.prevPickPlate.userData['linkedTile'];
+    //             new TWEEN.default.Tween(plateTarget.position)
+    //             .to({
+    //                 y: 0
+    //             }, 100)
+    //             .easing(TWEEN.default.Easing.Quadratic.Out)
+    //             .start();
+    //             plateTarget.material = this.matNormal;
+    //             this.prevPickPlate = null;
+    //         }
+    //     }
 
-    }
+    // }
 }

@@ -2,6 +2,7 @@ import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMateria
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Board } from './board';
 import { ModelManager } from './model';
+import { GameLogic } from './gamelogic';
 import * as TWEEN from '@tweenjs/tween.js';
 
 /**
@@ -21,10 +22,7 @@ export class Core {
     // 로직
     private model: ModelManager;
     private board: Board;
-
-    // 픽킹
-    private rayCast: Raycaster;
-    private mousePos: Vector2;
+    private gameLogic: GameLogic;
     
 
     /**
@@ -109,11 +107,8 @@ export class Core {
         this.model = new ModelManager(this.scene);
         // 게임판 인스턴스
         this.board = new Board(this.scene, this.model);
-
-        // 픽킹요소 초기화
-        this.rayCast = new Raycaster();
-        this.mousePos = new Vector2();
-        window.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+        // 게임로직
+        this.gameLogic = new GameLogic(this.scene, this.camera, this.board, this.model);
     }
 
     /**
@@ -138,17 +133,5 @@ export class Core {
         TWEEN.default.update();
 
         this.renderer.render(this.scene, this.camera);
-    }
-
-    /**
-     * 마우스 이동
-     */
-    private onMouseMove(event: MouseEvent) {
-
-        this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-        this.mousePos.y = -( event.clientY / window.innerHeight ) * 2 + 1;
-        this.rayCast.setFromCamera( this.mousePos, this.camera );
-        this.board.processPickEvent(this.rayCast);
-
     }
 }
