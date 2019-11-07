@@ -53901,29 +53901,6 @@ var Board = /** @class */ (function () {
         var geometry = new three_1.BoxBufferGeometry(this.tileSize, 1, this.tileSize, 1, 1, 1);
         var material = new three_1.MeshBasicMaterial();
         this.plateBase = new three_1.Mesh(geometry, material);
-        // // 바닥판 생성
-        // const geometry = new BoxBufferGeometry(this.tileSize, 1, this.tileSize, 1, 1, 1);
-        // const material = new MeshPhongMaterial({
-        //     color: 0xcccccc
-        // });
-        // // 10x10 보드 생성
-        // for(let h = 0; h < 10; h++) {
-        //     for(let w = 0; w < 10; w++) {
-        //         const board = new Mesh(geometry, material);
-        //         board.name = w + '_' + h + '/board';
-        //         board.position.x = w * this.tileSize;
-        //         board.position.z = h * this.tileSize;
-        //         board.castShadow = true;
-        //         board.receiveShadow = true;
-        //         this.scene.add(board);
-        //         const plate = board.clone();
-        //         plate.name = w + '_' + h + '/plate';
-        //         plate.position.copy(board.position);
-        //         plate.updateMatrixWorld(true);
-        //         plate.userData['sourceObject'] = board;
-        //         this.boards.push(plate);
-        //     }
-        // }
     }
     /**
      * 맵 생성
@@ -54120,12 +54097,26 @@ var GameLogic = /** @class */ (function () {
         // 픽킹요소 초기화
         this.rayCast = new three_1.Raycaster();
         this.mousePos = new three_1.Vector2();
+        this.mouseDownPos = new three_1.Vector2();
+        window.addEventListener('pointerdown', this.onPointerDown.bind(this), false);
         window.addEventListener('pointermove', this.onPointerMove.bind(this), false);
+        window.addEventListener('pointerup', this.onPointerUp.bind(this), false);
     }
     /**
-     * 마우스 픽킹 이벤트 처리
+     * 포인터 다운 이벤트 처리
+     * @param event 마우스 이벤트
+     */
+    GameLogic.prototype.onPointerDown = function (event) {
+        if (event.button === 0) { // 좌클릭, 1-터치
+            this.mouseDownPos.x = event.screenX;
+            this.mouseDownPos.y = event.screenY;
+        }
+    };
+    /**
+     * 포인터 이동 이벤트 처리
      */
     GameLogic.prototype.onPointerMove = function (event) {
+        // ray 계산
         this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
         this.rayCast.setFromCamera(this.mousePos, this.camera);
@@ -54137,11 +54128,34 @@ var GameLogic = /** @class */ (function () {
             if (tile) {
                 if (this.cursor) {
                     this.cursor.position.copy(tile.object.position);
-                    console.log('gamelogic.ts onPointerMove called.');
                 }
             }
         }
     };
+    /**
+     * 포인터 업 이벤트
+     * @param event 포인터 이벤트
+     */
+    GameLogic.prototype.onPointerUp = function (event) {
+        if (event.button === 0) {
+            // 마우스 좌클릭의 경우 화면회전도 겸하므로
+            // 포인터 다운 좌표와 업좌표사이 거리가 5.0픽셀 이하인경우 처리
+            var currPointerUpPos = new three_1.Vector2(event.screenX, event.screenY);
+            if (currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0) {
+                if (this.cursor) {
+                    // 테스트
+                    var cloneObject = this.cursor.userData['sourceObject'].clone();
+                    cloneObject.position.copy(this.cursor.position);
+                    this.scene.add(cloneObject);
+                    this.disposeCursor();
+                    console.warn('타일요소를 복제해서 생성하면서 맵데이터에 반영하고, 픽킹처리불가능 해볼것');
+                }
+            }
+        }
+    };
+    /**
+     * 커서 객체 생성
+     */
     GameLogic.prototype.createCursor = function () {
         var _this = this;
         var sourceObject = this.modelMgr.getModelByLevel(three_1.Math.randInt(1, 3));
@@ -54162,6 +54176,9 @@ var GameLogic = /** @class */ (function () {
             this.cursor.userData['sourceObject'] = sourceObject;
         }
     };
+    /**
+     * 커서 객체 메모리 해제
+     */
     GameLogic.prototype.disposeCursor = function () {
         if (this.cursor) {
             this.scene.remove(this.cursor);
