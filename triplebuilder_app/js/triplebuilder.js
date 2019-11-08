@@ -54088,6 +54088,7 @@ exports.Core = core_1.Core;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var GameLogic = /** @class */ (function () {
     function GameLogic(scene, camera, board, modelMgr) {
         this.scene = scene;
@@ -54164,6 +54165,18 @@ var GameLogic = /** @class */ (function () {
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
+                    // 애니메이션처리
+                    for (var i = 0; i < cloneObject.children.length; i++) {
+                        var child = cloneObject.children[i];
+                        child.position.y = 1000.0;
+                        new TWEEN.default.Tween(child.position)
+                            .to({
+                            y: 0
+                        }, 100)
+                            .easing(TWEEN.default.Easing.Quadratic.Out)
+                            .delay(i * 100)
+                            .start();
+                    }
                 }
             }
         }

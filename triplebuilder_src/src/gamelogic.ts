@@ -1,6 +1,7 @@
 import { Raycaster, Mesh, LineSegments, Math as THREEMATH, EdgesGeometry, Object3D, LineBasicMaterial, Scene, Vector2, Camera } from "three";
 import { Board, Tile } from "./board";
 import { ModelManager } from "./model";
+import * as TWEEN from '@tweenjs/tween.js';
 
 export class GameLogic {
 
@@ -103,6 +104,19 @@ export class GameLogic {
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
+
+                    // 애니메이션처리
+                    for(let i = 0; i < cloneObject.children.length; i++) {
+                        const child = cloneObject.children[i];
+                        child.position.y = 1000.0;
+                        new TWEEN.default.Tween(child.position)
+                        .to({
+                            y: 0
+                        }, 100)
+                        .easing(TWEEN.default.Easing.Quadratic.Out)
+                        .delay(i * 100)
+                        .start();
+                    }
 
                 }
             }
