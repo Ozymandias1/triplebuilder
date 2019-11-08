@@ -108,11 +108,11 @@ export class GameLogic {
                     // 애니메이션처리
                     for(let i = 0; i < cloneObject.children.length; i++) {
                         const child = cloneObject.children[i];
-                        child.position.y = 1000.0;
+                        child.position.y = 100.0;
                         new TWEEN.default.Tween(child.position)
                         .to({
                             y: 0
-                        }, 100)
+                        }, 500)
                         .easing(TWEEN.default.Easing.Quadratic.Out)
                         .delay(i * 100)
                         .start();

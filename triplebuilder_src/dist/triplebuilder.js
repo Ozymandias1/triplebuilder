@@ -53889,9 +53889,11 @@ var Board = /** @class */ (function () {
     /**
      * 생성자
      */
-    function Board(scene, modelMgr) {
+    function Board(scene, modelMgr, camera, camControl) {
         this.scene = scene;
         this.modelMgr = modelMgr;
+        this.camera = camera;
+        this.camControl = camControl;
         this.tileSize = 10;
         this.plates = [];
         this.prevPickPlate = null;
@@ -53936,6 +53938,20 @@ var Board = /** @class */ (function () {
                 }
             }
         }
+        // 바운딩을 계산하여 카메라를 이동시킨다.
+        var bounding = new three_1.Box3();
+        bounding.makeEmpty();
+        for (var i = 0; i < this.plates.length; i++) {
+            bounding.expandByObject(this.plates[i]);
+        }
+        var sphere = new three_1.Sphere();
+        bounding.getBoundingSphere(sphere);
+        this.camControl.target = sphere.center;
+        this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z - sphere.radius);
+        this.camControl.object.lookAt(sphere.center);
+        this.camControl.update();
+        this.camControl.minDistance = sphere.radius;
+        this.camControl.maxDistance = sphere.radius * 2;
     };
     return Board;
 }());
@@ -54011,10 +54027,13 @@ var Core = /** @class */ (function () {
         this.camera.lookAt(0, 0, 0);
         // 카메라 컨트롤러
         this.control = new OrbitControls_1.OrbitControls(this.camera, this.renderer.domElement);
-        this.control.enableDamping = false;
+        this.control.enableDamping = true;
+        this.control.dampingFactor = 0.05;
         this.control.enableKeys = false;
         this.control.screenSpacePanning = false;
         this.control.rotateSpeed = 0.5;
+        this.control.enablePan = false;
+        this.control.maxPolarAngle = Math.PI / 2;
         // // 바닥 그리드
         // const grid = new GridHelper(100, 100, 0xff0000, 0x000000);
         // this.scene.add(grid);
@@ -54033,7 +54052,7 @@ var Core = /** @class */ (function () {
         // 모델 인스턴스
         this.model = new model_1.ModelManager(this.scene);
         // 게임판 인스턴스
-        this.board = new board_1.Board(this.scene, this.model);
+        this.board = new board_1.Board(this.scene, this.model, this.camera, this.control);
         // 게임로직
         this.gameLogic = new gamelogic_1.GameLogic(this.scene, this.camera, this.board, this.model);
     }
@@ -54052,6 +54071,7 @@ var Core = /** @class */ (function () {
         requestAnimationFrame(this.render.bind(this));
         var deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.control.update();
         this.renderer.render(this.scene, this.camera);
     };
     return Core;
@@ -54168,11 +54188,11 @@ var GameLogic = /** @class */ (function () {
                     // 애니메이션처리
                     for (var i = 0; i < cloneObject.children.length; i++) {
                         var child = cloneObject.children[i];
-                        child.position.y = 1000.0;
+                        child.position.y = 100.0;
                         new TWEEN.default.Tween(child.position)
                             .to({
                             y: 0
-                        }, 100)
+                        }, 500)
                             .easing(TWEEN.default.Easing.Quadratic.Out)
                             .delay(i * 100)
                             .start();

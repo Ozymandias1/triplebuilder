@@ -80,10 +80,13 @@ export class Core {
 
         // 카메라 컨트롤러
         this.control = new OrbitControls(this.camera, this.renderer.domElement);
-        this.control.enableDamping = false;
+        this.control.enableDamping = true;
+        this.control.dampingFactor = 0.05;
         this.control.enableKeys = false;
         this.control.screenSpacePanning = false;
         this.control.rotateSpeed = 0.5;
+        this.control.enablePan = false;
+        this.control.maxPolarAngle = Math.PI / 2;
 
         // // 바닥 그리드
         // const grid = new GridHelper(100, 100, 0xff0000, 0x000000);
@@ -106,7 +109,7 @@ export class Core {
         // 모델 인스턴스
         this.model = new ModelManager(this.scene);
         // 게임판 인스턴스
-        this.board = new Board(this.scene, this.model);
+        this.board = new Board(this.scene, this.model, this.camera, this.control);
         // 게임로직
         this.gameLogic = new GameLogic(this.scene, this.camera, this.board, this.model);
     }
@@ -131,6 +134,7 @@ export class Core {
 
         const deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.control.update();
 
         this.renderer.render(this.scene, this.camera);
     }

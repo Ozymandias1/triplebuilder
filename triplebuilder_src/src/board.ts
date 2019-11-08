@@ -1,6 +1,7 @@
-import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial } from "three";
+import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial, Camera, Box3, Sphere } from "three";
 import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 export class Tile {
     public object: Object3D;
@@ -23,6 +24,8 @@ export class Board {
 
     private scene: Scene;
     private modelMgr: ModelManager;
+    private camera: Camera;
+    private camControl: OrbitControls;
     private tileSize: number;
     private map: Tile[][];
     private plateBase: Mesh;
@@ -35,10 +38,12 @@ export class Board {
     /**
      * 생성자
      */
-    constructor(scene: Scene, modelMgr: ModelManager) {
+    constructor(scene: Scene, modelMgr: ModelManager, camera: Camera, camControl: OrbitControls) {
 
         this.scene = scene;
         this.modelMgr = modelMgr;
+        this.camera = camera;
+        this.camControl = camControl;
         this.tileSize = 10;
         this.plates = [];
         this.prevPickPlate = null;
@@ -90,5 +95,25 @@ export class Board {
             }
         }
 
+        // 바운딩을 계산하여 카메라를 이동시킨다.
+        const bounding = new Box3();
+        bounding.makeEmpty();
+        for(let i = 0; i < this.plates.length; i++) {
+            bounding.expandByObject(this.plates[i]);
+        }
+
+        const sphere = new Sphere();
+        bounding.getBoundingSphere(sphere);
+
+        this.camControl.target = sphere.center;
+        this.camControl.object.position.set(
+            sphere.center.x,
+            sphere.center.y + sphere.radius,
+            sphere.center.z - sphere.radius
+        );
+        this.camControl.object.lookAt(sphere.center);
+        this.camControl.update();
+        this.camControl.minDistance = sphere.radius;
+        this.camControl.maxDistance = sphere.radius * 2;
     }
 }
