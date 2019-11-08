@@ -54125,10 +54125,24 @@ var GameLogic = /** @class */ (function () {
         if (intersects && intersects.length > 0) {
             var pickObject = intersects[0].object;
             var tile = pickObject.userData['linkedTile'];
-            if (tile) {
+            if (tile.level === 0) {
                 if (this.cursor) {
                     this.cursor.position.copy(tile.object.position);
+                    this.cursor.userData['pickedTile'] = tile;
+                    this.scene.add(this.cursor);
                 }
+            }
+            else {
+                if (this.cursor) {
+                    this.cursor.userData['pickedTile'] = null;
+                    this.scene.remove(this.cursor);
+                }
+            }
+        }
+        else {
+            if (this.cursor) {
+                this.cursor.userData['pickedTile'] = null;
+                this.scene.remove(this.cursor);
             }
         }
     };
@@ -54142,13 +54156,14 @@ var GameLogic = /** @class */ (function () {
             // 포인터 다운 좌표와 업좌표사이 거리가 5.0픽셀 이하인경우 처리
             var currPointerUpPos = new three_1.Vector2(event.screenX, event.screenY);
             if (currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0) {
-                if (this.cursor) {
-                    // 테스트
+                if (this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0) {
+                    // 타일의 레벨을 커서객체 레벨로 설정
+                    this.cursor.userData['pickedTile'].level = this.cursor.userData['level'];
+                    // 커서객체 메모리해제
                     var cloneObject = this.cursor.userData['sourceObject'].clone();
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
-                    console.warn('타일요소를 복제해서 생성하면서 맵데이터에 반영하고, 픽킹처리불가능 해볼것');
                 }
             }
         }
@@ -54158,7 +54173,8 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.createCursor = function () {
         var _this = this;
-        var sourceObject = this.modelMgr.getModelByLevel(three_1.Math.randInt(1, 3));
+        var level = three_1.Math.randInt(1, 3);
+        var sourceObject = this.modelMgr.getModelByLevel(level);
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if (sourceObject) {
             this.disposeCursor();
@@ -54174,6 +54190,7 @@ var GameLogic = /** @class */ (function () {
             });
             this.scene.add(this.cursor);
             this.cursor.userData['sourceObject'] = sourceObject;
+            this.cursor.userData['level'] = level;
         }
     };
     /**

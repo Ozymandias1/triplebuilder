@@ -58,12 +58,24 @@ export class GameLogic {
 
             const pickObject = intersects[0].object;
             const tile = <Tile>pickObject.userData['linkedTile'];
-            if( tile ) {
+            if( tile.level === 0 ) {
 
                 if( this.cursor ) {
                     this.cursor.position.copy(tile.object.position);
+                    this.cursor.userData['pickedTile'] = tile;
+                    this.scene.add(this.cursor);
                 }
 
+            } else {
+                if( this.cursor ) {
+                    this.cursor.userData['pickedTile'] = null;
+                    this.scene.remove(this.cursor);
+                }
+            }
+        } else {
+            if( this.cursor ) {
+                this.cursor.userData['pickedTile'] = null;
+                this.scene.remove(this.cursor);
             }
         }
 
@@ -82,14 +94,16 @@ export class GameLogic {
             const currPointerUpPos = new Vector2(event.screenX, event.screenY);
             if( currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0 ) {
 
-                if( this.cursor ) {
-                    // 테스트
+                if( this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0 ) {
+                    // 타일의 레벨을 커서객체 레벨로 설정
+                    this.cursor.userData['pickedTile'].level = this.cursor.userData['level'];
+
+                    // 커서객체 메모리해제
                     const cloneObject = this.cursor.userData['sourceObject'].clone();
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
 
-                    console.warn('타일요소를 복제해서 생성하면서 맵데이터에 반영하고, 픽킹처리불가능 해볼것');
                 }
             }
 
@@ -101,7 +115,8 @@ export class GameLogic {
      */
     createCursor() {
 
-        const sourceObject = this.modelMgr.getModelByLevel(THREEMATH.randInt(1, 3));
+        const level = THREEMATH.randInt(1,3);
+        const sourceObject = this.modelMgr.getModelByLevel(level);
 
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if( sourceObject ) {
@@ -121,6 +136,7 @@ export class GameLogic {
 
             this.scene.add(this.cursor);
             this.cursor.userData['sourceObject'] = sourceObject;
+            this.cursor.userData['level'] = level;
 
         }
     }
