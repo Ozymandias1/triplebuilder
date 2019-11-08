@@ -96,8 +96,9 @@ export class GameLogic {
             if( currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0 ) {
 
                 if( this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0 ) {
+                    const targetTile = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
-                    this.cursor.userData['pickedTile'].level = this.cursor.userData['level'];
+                    targetTile.level = this.cursor.userData['level'];
 
                     // 커서객체 메모리해제
                     const cloneObject = this.cursor.userData['sourceObject'].clone();
@@ -115,12 +116,16 @@ export class GameLogic {
                         }, 500)
                         .easing(TWEEN.default.Easing.Quadratic.Out)
                         .delay(i * 100)
+                        .onComplete(()=>{
+                            // 마지막 자식 객체의 애니메이션이 종료된 후에 체크를 수행
+                            if( i === (cloneObject.children.length-1)) {
+                                this.board.checkTriple(targetTile);
+                            }
+                        })
                         .start();
                     }
-
                 }
             }
-
         }
     }
 

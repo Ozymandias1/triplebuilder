@@ -116,4 +116,12 @@ export class Board {
         this.camControl.minDistance = sphere.radius;
         this.camControl.maxDistance = sphere.radius * 2;
     }
+
+    /**
+     * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
+     * @param tile 타일 객체
+     */
+    checkTriple(tile: Tile) {
+        console.log('생성한 타일 정보', tile);
+    }
 }

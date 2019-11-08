@@ -53953,6 +53953,13 @@ var Board = /** @class */ (function () {
         this.camControl.minDistance = sphere.radius;
         this.camControl.maxDistance = sphere.radius * 2;
     };
+    /**
+     * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
+     * @param tile 타일 객체
+     */
+    Board.prototype.checkTriple = function (tile) {
+        console.log('생성한 타일 정보', tile);
+    };
     return Board;
 }());
 exports.Board = Board;
@@ -54172,22 +54179,23 @@ var GameLogic = /** @class */ (function () {
      * @param event 포인터 이벤트
      */
     GameLogic.prototype.onPointerUp = function (event) {
+        var _this = this;
         if (event.button === 0) {
             // 마우스 좌클릭의 경우 화면회전도 겸하므로
             // 포인터 다운 좌표와 업좌표사이 거리가 5.0픽셀 이하인경우 처리
             var currPointerUpPos = new three_1.Vector2(event.screenX, event.screenY);
             if (currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0) {
                 if (this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0) {
+                    var targetTile_1 = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
-                    this.cursor.userData['pickedTile'].level = this.cursor.userData['level'];
+                    targetTile_1.level = this.cursor.userData['level'];
                     // 커서객체 메모리해제
-                    var cloneObject = this.cursor.userData['sourceObject'].clone();
-                    cloneObject.position.copy(this.cursor.position);
-                    this.scene.add(cloneObject);
+                    var cloneObject_1 = this.cursor.userData['sourceObject'].clone();
+                    cloneObject_1.position.copy(this.cursor.position);
+                    this.scene.add(cloneObject_1);
                     this.disposeCursor();
-                    // 애니메이션처리
-                    for (var i = 0; i < cloneObject.children.length; i++) {
-                        var child = cloneObject.children[i];
+                    var _loop_1 = function (i) {
+                        var child = cloneObject_1.children[i];
                         child.position.y = 100.0;
                         new TWEEN.default.Tween(child.position)
                             .to({
@@ -54195,7 +54203,17 @@ var GameLogic = /** @class */ (function () {
                         }, 500)
                             .easing(TWEEN.default.Easing.Quadratic.Out)
                             .delay(i * 100)
+                            .onComplete(function () {
+                            // 마지막 자식 객체의 애니메이션이 종료된 후에 체크를 수행
+                            if (i === (cloneObject_1.children.length - 1)) {
+                                _this.board.checkTriple(targetTile_1);
+                            }
+                        })
                             .start();
+                    };
+                    // 애니메이션처리
+                    for (var i = 0; i < cloneObject_1.children.length; i++) {
+                        _loop_1(i);
                     }
                 }
             }
