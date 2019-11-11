@@ -56,6 +56,7 @@ export class ModelManager {
                             object.traverse( child => {
                                 if( child instanceof Mesh ) {
                                     child.geometry.scale(8.88,8.88,8.88);
+                                    child.geometry.rotateY(Math.PI);
                                     child.castShadow = true;
                                     child.receiveShadow = true;
                                 }
@@ -99,14 +100,5 @@ export class ModelManager {
             return null;
         }
 
-    }
-
-    getModelByLevel(level: number) {
-        const key = 'level' + level;
-        if( this.models.hasOwnProperty(key) ) {
-            return this.models[key];
-        }
-
-        return null;
     }
 }

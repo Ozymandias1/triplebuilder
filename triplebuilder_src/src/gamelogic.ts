@@ -99,12 +99,16 @@ export class GameLogic {
                     const targetTile = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
                     targetTile.level = this.cursor.userData['level'];
-
+                    
                     // 커서객체 메모리해제
                     const cloneObject = this.cursor.userData['sourceObject'].clone();
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
+
+                    // 타일에 설정되어있던 이전 타일 객체를 제거하고 복제한 새 모델을 할당
+                    this.scene.remove(targetTile.object);
+                    targetTile.object = cloneObject;
 
                     // 애니메이션처리
                     for(let i = 0; i < cloneObject.children.length; i++) {
@@ -135,7 +139,7 @@ export class GameLogic {
     createCursor() {
 
         const level = THREEMATH.randInt(1,3);
-        const sourceObject = this.modelMgr.getModelByLevel(level);
+        const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if( sourceObject ) {

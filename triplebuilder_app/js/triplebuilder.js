@@ -53896,6 +53896,8 @@ var Board = /** @class */ (function () {
         this.camControl = camControl;
         this.tileSize = 10;
         this.plates = [];
+        this.mapWidth = -1;
+        this.mapHeight = -1;
         this.prevPickPlate = null;
         this.matSelect = new three_1.MeshPhongMaterial({ color: 0xffff00 });
         this.matNormal = new three_1.MeshPhongMaterial({ color: 0xcccccc });
@@ -53910,6 +53912,8 @@ var Board = /** @class */ (function () {
      * @param height 맵 세로 타일개수
      */
     Board.prototype.createMap = function (width, height) {
+        this.mapWidth = width;
+        this.mapHeight = height;
         // 가로세로 개수만큼 초기화
         this.map = [];
         for (var w = 0; w < width; w++) {
@@ -53947,7 +53951,7 @@ var Board = /** @class */ (function () {
         var sphere = new three_1.Sphere();
         bounding.getBoundingSphere(sphere);
         this.camControl.target = sphere.center;
-        this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z - sphere.radius);
+        this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius);
         this.camControl.object.lookAt(sphere.center);
         this.camControl.update();
         this.camControl.minDistance = sphere.radius;
@@ -53958,7 +53962,105 @@ var Board = /** @class */ (function () {
      * @param tile 타일 객체
      */
     Board.prototype.checkTriple = function (tile) {
-        console.log('생성한 타일 정보', tile);
+        // let matched = [tile];
+        // let checkTile = null;
+        // // 대상타일 기준 8방향 체크
+        // // 좌상단
+        // checkTile = (tile.tileW > 0 && tile.tileH > 0 ) ? this.map[tile.tileW-1][tile.tileH-1] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 상단
+        // checkTile = (tile.tileH > 0) ? this.map[tile.tileW][tile.tileH-1] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 우상단
+        // checkTile = (tile.tileW < this.mapWidth-1 && tile.tileH > 0) ? this.map[tile.tileW+1][tile.tileH-1] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 좌측
+        // checkTile = (tile.tileW > 0) ? this.map[tile.tileW-1][tile.tileH] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 우측
+        // checkTile = (tile.tileW < this.mapWidth-1) ? this.map[tile.tileW+1][tile.tileH] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 좌하단
+        // checkTile = (tile.tileW > 0 && tile.tileH < this.mapHeight-1) ? this.map[tile.tileW-1][tile.tileH+1] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 하단
+        // checkTile = (tile.tileH < this.mapHeight-1) ? this.map[tile.tileW][tile.tileH+1] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 우하단
+        // checkTile = (tile.tileW < this.mapWidth-1 && tile.tileH < this.mapHeight-1) ? this.map[tile.tileW+1][tile.tileH+1] : null;
+        // if( checkTile && checkTile.level === tile.level ) {
+        //     if( matched.indexOf(checkTile) === -1 ) {
+        //         matched.push(checkTile);
+        //     }
+        // }
+        // // 매치된 타일 처리
+        // if( matched.length >= 3 ) {
+        //     let newLevelNumber = tile.level;
+        //     newLevelNumber++;
+        //     const zeroTile = this.modelMgr.getModelByLevelNumber(0);
+        //     const levelUpTileSource = this.modelMgr.getModelByLevelNumber(newLevelNumber);
+        //     if( levelUpTileSource ) { // 레벨업 타일이 있다면 다른 타일들을 제거하고 새 타일로 교체함
+        //         // 제거
+        //         for(let i = 0; i < matched.length; i++) {
+        //             if( matched[i].tileW === tile.tileW && matched[i].tileH === tile.tileH ) { 
+        //                 // 대상타일은 레벨업 타일로 교체
+        //                 const newTile = levelUpTileSource.clone();
+        //                 newTile.position.copy(matched[i].object.position);
+        //                 this.scene.add(newTile);
+        //                 this.scene.remove(matched[i].object);
+        //                 matched[i].object = newTile;
+        //                 matched[i].level = newLevelNumber;
+        //             } else {
+        //                 // 대상타일이 아닌것은 0레벨 타일로 교체
+        //                 const emptyTile = zeroTile.clone();
+        //                 emptyTile.position.copy(matched[i].object.position);
+        //                 this.scene.add(emptyTile);
+        //                 this.scene.remove(matched[i].object);
+        //                 matched[i].object = emptyTile;
+        //                 matched[i].level = 0;
+        //             }
+        //         }
+        //     } else { // 최대레벨이 3매치가 성사되었다면
+        //         // 매치된 타일 전체를 제거하고, 빈타일로 만든다.
+        //         for(let i = 0; i < matched.length; i++) {
+        //             const emptyTile = zeroTile.clone();
+        //             emptyTile.position.copy(matched[i].object.position);
+        //             this.scene.add(emptyTile);
+        //             this.scene.remove(matched[i].object);
+        //             matched[i].object = emptyTile;
+        //             matched[i].level = 0;
+        //         }
+        //         console.warn('최대레벨 타일 매치됨.');
+        //     }
+        // }
     };
     return Board;
 }());
@@ -54194,6 +54296,9 @@ var GameLogic = /** @class */ (function () {
                     cloneObject_1.position.copy(this.cursor.position);
                     this.scene.add(cloneObject_1);
                     this.disposeCursor();
+                    // 타일에 설정되어있던 이전 타일 객체를 제거하고 복제한 새 모델을 할당
+                    this.scene.remove(targetTile_1.object);
+                    targetTile_1.object = cloneObject_1;
                     var _loop_1 = function (i) {
                         var child = cloneObject_1.children[i];
                         child.position.y = 100.0;
@@ -54225,7 +54330,7 @@ var GameLogic = /** @class */ (function () {
     GameLogic.prototype.createCursor = function () {
         var _this = this;
         var level = three_1.Math.randInt(1, 3);
-        var sourceObject = this.modelMgr.getModelByLevel(level);
+        var sourceObject = this.modelMgr.getModelByLevelNumber(level);
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if (sourceObject) {
             this.disposeCursor();
@@ -54317,6 +54422,7 @@ var ModelManager = /** @class */ (function () {
                     object.traverse(function (child) {
                         if (child instanceof three_1.Mesh) {
                             child.geometry.scale(8.88, 8.88, 8.88);
+                            child.geometry.rotateY(Math.PI);
                             child.castShadow = true;
                             child.receiveShadow = true;
                         }
@@ -54348,13 +54454,6 @@ var ModelManager = /** @class */ (function () {
         else {
             return null;
         }
-    };
-    ModelManager.prototype.getModelByLevel = function (level) {
-        var key = 'level' + level;
-        if (this.models.hasOwnProperty(key)) {
-            return this.models[key];
-        }
-        return null;
     };
     return ModelManager;
 }());
