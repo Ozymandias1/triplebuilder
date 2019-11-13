@@ -88,18 +88,6 @@ export class Core {
         this.control.enablePan = false;
         this.control.maxPolarAngle = Math.PI / 2;
 
-        // // 바닥 그리드
-        // const grid = new GridHelper(100, 100, 0xff0000, 0x000000);
-        // this.scene.add(grid);
-        // // 바닥
-        // const groundGeometry = new PlaneBufferGeometry(100, 100, 1, 1);
-        // groundGeometry.rotateX(Math.PI * -0.5);
-        // const groundMaterial = new MeshPhongMaterial({color: 0xcccccc});
-        // const ground = new Mesh(groundGeometry, groundMaterial);
-        // ground.castShadow = false;
-        // ground.receiveShadow = true;
-        // this.scene.add(ground);
-
         // 창크기변경 이벤트 등록
         window.addEventListener('resize', this.onResize.bind(this), false);
 

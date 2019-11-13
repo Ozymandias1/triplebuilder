@@ -139,7 +139,7 @@ export class GameLogic {
      */
     createCursor() {
 
-        const level = THREEMATH.randInt(1,3);
+        const level = THREEMATH.randInt(1,4);
         const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성

@@ -54233,17 +54233,6 @@ var Core = /** @class */ (function () {
         this.control.rotateSpeed = 0.5;
         this.control.enablePan = false;
         this.control.maxPolarAngle = Math.PI / 2;
-        // // 바닥 그리드
-        // const grid = new GridHelper(100, 100, 0xff0000, 0x000000);
-        // this.scene.add(grid);
-        // // 바닥
-        // const groundGeometry = new PlaneBufferGeometry(100, 100, 1, 1);
-        // groundGeometry.rotateX(Math.PI * -0.5);
-        // const groundMaterial = new MeshPhongMaterial({color: 0xcccccc});
-        // const ground = new Mesh(groundGeometry, groundMaterial);
-        // ground.castShadow = false;
-        // ground.receiveShadow = true;
-        // this.scene.add(ground);
         // 창크기변경 이벤트 등록
         window.addEventListener('resize', this.onResize.bind(this), false);
         // 렌더링 루프 시작
@@ -54425,7 +54414,7 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.createCursor = function () {
         var _this = this;
-        var level = three_1.Math.randInt(1, 3);
+        var level = three_1.Math.randInt(1, 4);
         var sourceObject = this.modelMgr.getModelByLevelNumber(level);
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if (sourceObject) {
@@ -54503,7 +54492,8 @@ var ModelManager = /** @class */ (function () {
         var objUrls = [
             { key: 'level1', url: 'models/Level1.obj' },
             { key: 'level2', url: 'models/Level2.obj' },
-            { key: 'level3', url: 'models/Level3.obj' }
+            { key: 'level3', url: 'models/Level3.obj' },
+            { key: 'level4', url: 'models/Level4.obj' }
         ];
         // let offset = 0;
         new MTLLoader_1.MTLLoader().load('models/materials.mtl', function (materials) {
@@ -54513,7 +54503,7 @@ var ModelManager = /** @class */ (function () {
                     // 객체 그림자 On
                     object.traverse(function (child) {
                         if (child instanceof three_1.Mesh) {
-                            child.geometry.scale(8.88, 8.88, 8.88);
+                            child.geometry.scale(5, 5, 5);
                             child.geometry.rotateY(Math.PI);
                             child.castShadow = true;
                             child.receiveShadow = true;

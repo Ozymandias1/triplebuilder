@@ -32,9 +32,10 @@ export class ModelManager {
         // 기본 모델들 로드
         const scope = this;
         const objUrls = [
-            { key: 'level1', url: 'models/Level1.obj'},
-            { key: 'level2', url: 'models/Level2.obj'},
-            { key: 'level3', url: 'models/Level3.obj'}
+            { key: 'level1', url: 'models/Level1.obj' },
+            { key: 'level2', url: 'models/Level2.obj' },
+            { key: 'level3', url: 'models/Level3.obj' },
+            { key: 'level4', url: 'models/Level4.obj' }
         ];
         // let offset = 0;
         new MTLLoader().load(
@@ -51,7 +52,7 @@ export class ModelManager {
                             // 객체 그림자 On
                             object.traverse( child => {
                                 if( child instanceof Mesh ) {
-                                    child.geometry.scale(8.88,8.88,8.88);
+                                    child.geometry.scale(5,5,5);
                                     child.geometry.rotateY(Math.PI);
                                     child.castShadow = true;
                                     child.receiveShadow = true;
