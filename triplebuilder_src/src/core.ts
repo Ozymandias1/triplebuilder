@@ -28,7 +28,7 @@ export class Core {
     /**
      * 생성자
      */
-    constructor() {
+    constructor(onReady?: Function) {
 
         this.clock = new Clock();
 
@@ -106,12 +106,17 @@ export class Core {
         // 렌더링 루프 시작
         this.render();
 
+        const scope = this;
         // 모델 인스턴스
-        this.model = new ModelManager(this.scene);
-        // 게임판 인스턴스
-        this.board = new Board(this.scene, this.model, this.camera, this.control);
-        // 게임로직
-        this.gameLogic = new GameLogic(this.scene, this.camera, this.board, this.model);
+        this.model = new ModelManager(this.scene, function(){
+            // 게임판 인스턴스
+            scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control);
+            // 게임로직
+            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.board, scope.model);
+            if( onReady ) {
+                onReady();
+            }
+        });
     }
 
     /**

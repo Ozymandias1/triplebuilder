@@ -13,7 +13,7 @@ export class ModelManager {
     /**
      * 생성자
      */
-    constructor(scene: Scene) {
+    constructor(scene: Scene, onReady?: Function) {
 
         this.scene = scene;
         this.models = {};
@@ -47,10 +47,6 @@ export class ModelManager {
                     new OBJLoader().setMaterials(materials).load(
                         element.url,
                         function (object) {
-                            // object.position.x = offset;
-                            // object.position.z = offset;
-                            // object.scale.set(8.88,8.88,8.88);
-                            // offset += 5;
 
                             // 객체 그림자 On
                             object.traverse( child => {
@@ -62,10 +58,14 @@ export class ModelManager {
                                 }
                             });
 
-                            //scope.scene.add(object);
-
                             // 모델 스토리지에 저장
                             scope.models[element.key] = object;
+
+                            if( Object.keys(scope.models).length === 4 ) {
+                                if( onReady ) {
+                                    onReady();
+                                }
+                            }
                         },
                         function (progress){},
                         function(err){

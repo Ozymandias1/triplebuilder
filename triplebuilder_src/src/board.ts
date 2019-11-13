@@ -121,8 +121,8 @@ export class Board {
         );
         this.camControl.object.lookAt(sphere.center);
         this.camControl.update();
-        // this.camControl.minDistance = sphere.radius;
-        // this.camControl.maxDistance = sphere.radius * 2;
+        this.camControl.minDistance = sphere.radius;
+        this.camControl.maxDistance = sphere.radius * 2;
     }
 
     /**
@@ -259,40 +259,9 @@ export class Board {
                         emptyTile.position.copy(matched[i].object.position);
                         this.scene.add(emptyTile);
 
-                        const delObject = matched[i].object;//this.scene.remove(matched[i].object);
+                        this.deleteTileObject(matched[i].object, tile);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
-
-                        // 애니메이션 테스트
-                        const delChildCount = delObject.children.length;
-                        for(let delChildIndex = 0; delChildIndex < delChildCount; delChildIndex++) {
-                            const delChild = delObject.children[0];
-                            const worldPos = delChild.localToWorld(new Vector3(0, 0, 0));
-                            this.scene.add(delChild);
-                            delChild.position.copy(worldPos);
-                            const delTweenData = {
-                                ptStart: worldPos.clone(),
-                                ptTarget: tile.object.position.clone(),
-                                ratio: 0.0 
-                            };
-                            new TWEEN.default.Tween(delTweenData)
-                            .to({
-                                ratio: 1.0
-                            }, 500)
-                            .easing(TWEEN.default.Easing.Quadratic.Out)
-                            .delay(delChildIndex * 100)
-                            .onUpdate((data)=>{
-                                delChild.position.copy(
-                                    new Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio)
-                                );
-                                delChild.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
-                            })
-                            .onComplete(()=>{
-                                this.scene.remove(delChild);
-                            })
-                            .start();
-                        }
-                        this.scene.remove(delObject); // 비어있는 상위 그룹객체는 바로 제거
                     }
                 }
             } else { // 최대레벨이 3매치가 성사되었다면
@@ -303,7 +272,7 @@ export class Board {
                     emptyTile.position.copy(matched[i].object.position);
                     this.scene.add(emptyTile);
 
-                    this.scene.remove(matched[i].object);
+                    this.deleteTileObject(matched[i].object, tile);
                     matched[i].object = emptyTile;
                     matched[i].level = 0;
                 }
@@ -313,5 +282,59 @@ export class Board {
             // 매치된 타일처리후에 매치된것이 있을수 있으므로
             this.checkTriple(tile);
         }
+    }
+
+    /**
+     * 제거 대상 타일 객체를 애니메이션을 적용하여 제거한다.
+     * @param target 제거 대상
+     * @param tile 애니메이션 목표 대상 타일
+     */
+    deleteTileObject(target: Object3D, tile: Tile) {
+
+        // 애니메이션 목표 대상 타일의 바운딩 계산
+        const bounding = new Box3().setFromObject(tile.object);
+        const center = new Vector3();
+        bounding.getCenter(center);
+
+        const childCount = target.children.length;
+        for(let i = 0; i < childCount; i++) {
+            // 루트 Scene으로 옮기는 순간 제거대상의 자식 객체 목록에서 제거되므로 
+            // 개수만큼 순환하며 0번째 것을 가져온다.
+            const child = target.children[0];
+
+            // 자식객체의 월드 좌표 계산
+            const worldPosition = child.localToWorld(new Vector3(0, 0, 0));
+            this.scene.add(child);
+
+            child.position.copy(worldPosition);
+
+            // 애니메이션처리
+            const animData = {
+                ptStart: worldPosition.clone(),
+                ptTarget: center.clone(),
+                ratio: 0.0
+            };
+            new TWEEN.default.Tween(animData)
+            .to({
+                ratio: 1.0
+            }, 500)
+            .easing(TWEEN.default.Easing.Quadratic.Out)
+            .delay(i * 100)
+            .onUpdate((data)=>{
+                // 위치, 스케일 업데이트
+                child.position.copy(
+                    new Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio)
+                );
+                child.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
+            })
+            .onComplete(()=>{
+                // 애니메이션 완료후 씬에서 제거
+                this.scene.remove(child);
+            })
+            .start();
+
+        }
+        // 위 루프문을 수행후엔 자식객체가 없는 그룹이 되므로 바로 제거
+        this.scene.remove(target);
     }
 }

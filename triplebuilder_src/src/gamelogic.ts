@@ -124,6 +124,7 @@ export class GameLogic {
                             // 마지막 자식 객체의 애니메이션이 종료된 후에 체크를 수행
                             if( i === (cloneObject.children.length-1)) {
                                 this.board.checkTriple(targetTile);
+                                this.createCursor();
                             }
                         })
                         .start();

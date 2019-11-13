@@ -53955,15 +53955,14 @@ var Board = /** @class */ (function () {
         this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius);
         this.camControl.object.lookAt(sphere.center);
         this.camControl.update();
-        // this.camControl.minDistance = sphere.radius;
-        // this.camControl.maxDistance = sphere.radius * 2;
+        this.camControl.minDistance = sphere.radius;
+        this.camControl.maxDistance = sphere.radius * 2;
     };
     /**
      * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
      * @param tile 타일 객체
      */
     Board.prototype.checkTriple = function (tile) {
-        var _this = this;
         if (tile.level === 0) {
             return;
         }
@@ -54081,41 +54080,9 @@ var Board = /** @class */ (function () {
                         var emptyTile = zeroTile.clone();
                         emptyTile.position.copy(matched[i].object.position);
                         this.scene.add(emptyTile);
-                        var delObject = matched[i].object; //this.scene.remove(matched[i].object);
+                        this.deleteTileObject(matched[i].object, tile);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
-                        // 애니메이션 테스트
-                        var delChildCount = delObject.children.length;
-                        var _loop_1 = function (delChildIndex) {
-                            var delChild = delObject.children[0];
-                            var worldPos = delChild.localToWorld(new three_1.Vector3(0, 0, 0));
-                            this_1.scene.add(delChild);
-                            delChild.position.copy(worldPos);
-                            var delTweenData = {
-                                ptStart: worldPos.clone(),
-                                ptTarget: tile.object.position.clone(),
-                                ratio: 0.0
-                            };
-                            new TWEEN.default.Tween(delTweenData)
-                                .to({
-                                ratio: 1.0
-                            }, 500)
-                                .easing(TWEEN.default.Easing.Quadratic.Out)
-                                .delay(delChildIndex * 100)
-                                .onUpdate(function (data) {
-                                delChild.position.copy(new three_1.Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio));
-                                delChild.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
-                            })
-                                .onComplete(function () {
-                                _this.scene.remove(delChild);
-                            })
-                                .start();
-                        };
-                        var this_1 = this;
-                        for (var delChildIndex = 0; delChildIndex < delChildCount; delChildIndex++) {
-                            _loop_1(delChildIndex);
-                        }
-                        this.scene.remove(delObject); // 비어있는 상위 그룹객체는 바로 제거
                     }
                 }
             }
@@ -54125,7 +54092,7 @@ var Board = /** @class */ (function () {
                     var emptyTile = zeroTile.clone();
                     emptyTile.position.copy(matched[i].object.position);
                     this.scene.add(emptyTile);
-                    this.scene.remove(matched[i].object);
+                    this.deleteTileObject(matched[i].object, tile);
                     matched[i].object = emptyTile;
                     matched[i].level = 0;
                 }
@@ -54134,6 +54101,56 @@ var Board = /** @class */ (function () {
             // 매치된 타일처리후에 매치된것이 있을수 있으므로
             this.checkTriple(tile);
         }
+    };
+    /**
+     * 제거 대상 타일 객체를 애니메이션을 적용하여 제거한다.
+     * @param target 제거 대상
+     * @param tile 애니메이션 목표 대상 타일
+     */
+    Board.prototype.deleteTileObject = function (target, tile) {
+        var _this = this;
+        // 애니메이션 목표 대상 타일의 바운딩 계산
+        var bounding = new three_1.Box3().setFromObject(tile.object);
+        var center = new three_1.Vector3();
+        bounding.getCenter(center);
+        var childCount = target.children.length;
+        var _loop_1 = function (i) {
+            // 루트 Scene으로 옮기는 순간 제거대상의 자식 객체 목록에서 제거되므로 
+            // 개수만큼 순환하며 0번째 것을 가져온다.
+            var child = target.children[0];
+            // 자식객체의 월드 좌표 계산
+            var worldPosition = child.localToWorld(new three_1.Vector3(0, 0, 0));
+            this_1.scene.add(child);
+            child.position.copy(worldPosition);
+            // 애니메이션처리
+            var animData = {
+                ptStart: worldPosition.clone(),
+                ptTarget: center.clone(),
+                ratio: 0.0
+            };
+            new TWEEN.default.Tween(animData)
+                .to({
+                ratio: 1.0
+            }, 500)
+                .easing(TWEEN.default.Easing.Quadratic.Out)
+                .delay(i * 100)
+                .onUpdate(function (data) {
+                // 위치, 스케일 업데이트
+                child.position.copy(new three_1.Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio));
+                child.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
+            })
+                .onComplete(function () {
+                // 애니메이션 완료후 씬에서 제거
+                _this.scene.remove(child);
+            })
+                .start();
+        };
+        var this_1 = this;
+        for (var i = 0; i < childCount; i++) {
+            _loop_1(i);
+        }
+        // 위 루프문을 수행후엔 자식객체가 없는 그룹이 되므로 바로 제거
+        this.scene.remove(target);
     };
     return Board;
 }());
@@ -54165,7 +54182,7 @@ var Core = /** @class */ (function () {
     /**
      * 생성자
      */
-    function Core() {
+    function Core(onReady) {
         this.clock = new three_1.Clock();
         // 렌더러 생성
         this.renderer = new three_1.WebGLRenderer({
@@ -54231,12 +54248,17 @@ var Core = /** @class */ (function () {
         window.addEventListener('resize', this.onResize.bind(this), false);
         // 렌더링 루프 시작
         this.render();
+        var scope = this;
         // 모델 인스턴스
-        this.model = new model_1.ModelManager(this.scene);
-        // 게임판 인스턴스
-        this.board = new board_1.Board(this.scene, this.model, this.camera, this.control);
-        // 게임로직
-        this.gameLogic = new gamelogic_1.GameLogic(this.scene, this.camera, this.board, this.model);
+        this.model = new model_1.ModelManager(this.scene, function () {
+            // 게임판 인스턴스
+            scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control);
+            // 게임로직
+            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.board, scope.model);
+            if (onReady) {
+                onReady();
+            }
+        });
     }
     /**
      * 창크기변경 이벤트
@@ -54385,6 +54407,7 @@ var GameLogic = /** @class */ (function () {
                             // 마지막 자식 객체의 애니메이션이 종료된 후에 체크를 수행
                             if (i === (cloneObject_1.children.length - 1)) {
                                 _this.board.checkTriple(targetTile_1);
+                                _this.createCursor();
                             }
                         })
                             .start();
@@ -54463,7 +54486,7 @@ var ModelManager = /** @class */ (function () {
     /**
      * 생성자
      */
-    function ModelManager(scene) {
+    function ModelManager(scene, onReady) {
         this.scene = scene;
         this.models = {};
         // 기본판
@@ -54487,10 +54510,6 @@ var ModelManager = /** @class */ (function () {
             materials.preload();
             objUrls.forEach(function (element, index) {
                 new OBJLoader_1.OBJLoader().setMaterials(materials).load(element.url, function (object) {
-                    // object.position.x = offset;
-                    // object.position.z = offset;
-                    // object.scale.set(8.88,8.88,8.88);
-                    // offset += 5;
                     // 객체 그림자 On
                     object.traverse(function (child) {
                         if (child instanceof three_1.Mesh) {
@@ -54500,9 +54519,13 @@ var ModelManager = /** @class */ (function () {
                             child.receiveShadow = true;
                         }
                     });
-                    //scope.scene.add(object);
                     // 모델 스토리지에 저장
                     scope.models[element.key] = object;
+                    if (Object.keys(scope.models).length === 4) {
+                        if (onReady) {
+                            onReady();
+                        }
+                    }
                 }, function (progress) { }, function (err) {
                     if (err) {
                         console.error(err);
