@@ -53873,6 +53873,7 @@ var OBJLoader = ( function () {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var Tile = /** @class */ (function () {
     function Tile(w, h, level) {
         this.tileW = w;
@@ -53962,6 +53963,7 @@ var Board = /** @class */ (function () {
      * @param tile 타일 객체
      */
     Board.prototype.checkTriple = function (tile) {
+        var _this = this;
         if (tile.level === 0) {
             return;
         }
@@ -54079,9 +54081,41 @@ var Board = /** @class */ (function () {
                         var emptyTile = zeroTile.clone();
                         emptyTile.position.copy(matched[i].object.position);
                         this.scene.add(emptyTile);
-                        this.scene.remove(matched[i].object);
+                        var delObject = matched[i].object; //this.scene.remove(matched[i].object);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
+                        // 애니메이션 테스트
+                        var delChildCount = delObject.children.length;
+                        var _loop_1 = function (delChildIndex) {
+                            var delChild = delObject.children[0];
+                            var worldPos = delChild.localToWorld(new three_1.Vector3(0, 0, 0));
+                            this_1.scene.add(delChild);
+                            delChild.position.copy(worldPos);
+                            var delTweenData = {
+                                ptStart: worldPos.clone(),
+                                ptTarget: tile.object.position.clone(),
+                                ratio: 0.0
+                            };
+                            new TWEEN.default.Tween(delTweenData)
+                                .to({
+                                ratio: 1.0
+                            }, 500)
+                                .easing(TWEEN.default.Easing.Quadratic.Out)
+                                .delay(delChildIndex * 100)
+                                .onUpdate(function (data) {
+                                delChild.position.copy(new three_1.Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio));
+                                delChild.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
+                            })
+                                .onComplete(function () {
+                                _this.scene.remove(delChild);
+                            })
+                                .start();
+                        };
+                        var this_1 = this;
+                        for (var delChildIndex = 0; delChildIndex < delChildCount; delChildIndex++) {
+                            _loop_1(delChildIndex);
+                        }
+                        this.scene.remove(delObject); // 비어있는 상위 그룹객체는 바로 제거
                     }
                 }
             }

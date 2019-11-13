@@ -1,7 +1,8 @@
-import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial, Camera, Box3, Sphere } from "three";
+import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial, Camera, Box3, Sphere, Vector3 } from "three";
 import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { _Math } from "three/src/math/Math";
 
 export class Tile {
     public object: Object3D;
@@ -258,9 +259,40 @@ export class Board {
                         emptyTile.position.copy(matched[i].object.position);
                         this.scene.add(emptyTile);
 
-                        this.scene.remove(matched[i].object);
+                        const delObject = matched[i].object;//this.scene.remove(matched[i].object);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
+
+                        // 애니메이션 테스트
+                        const delChildCount = delObject.children.length;
+                        for(let delChildIndex = 0; delChildIndex < delChildCount; delChildIndex++) {
+                            const delChild = delObject.children[0];
+                            const worldPos = delChild.localToWorld(new Vector3(0, 0, 0));
+                            this.scene.add(delChild);
+                            delChild.position.copy(worldPos);
+                            const delTweenData = {
+                                ptStart: worldPos.clone(),
+                                ptTarget: tile.object.position.clone(),
+                                ratio: 0.0 
+                            };
+                            new TWEEN.default.Tween(delTweenData)
+                            .to({
+                                ratio: 1.0
+                            }, 500)
+                            .easing(TWEEN.default.Easing.Quadratic.Out)
+                            .delay(delChildIndex * 100)
+                            .onUpdate((data)=>{
+                                delChild.position.copy(
+                                    new Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio)
+                                );
+                                delChild.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
+                            })
+                            .onComplete(()=>{
+                                this.scene.remove(delChild);
+                            })
+                            .start();
+                        }
+                        this.scene.remove(delObject); // 비어있는 상위 그룹객체는 바로 제거
                     }
                 }
             } else { // 최대레벨이 3매치가 성사되었다면
