@@ -53954,113 +53954,152 @@ var Board = /** @class */ (function () {
         this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius);
         this.camControl.object.lookAt(sphere.center);
         this.camControl.update();
-        this.camControl.minDistance = sphere.radius;
-        this.camControl.maxDistance = sphere.radius * 2;
+        // this.camControl.minDistance = sphere.radius;
+        // this.camControl.maxDistance = sphere.radius * 2;
     };
     /**
      * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
      * @param tile 타일 객체
      */
     Board.prototype.checkTriple = function (tile) {
-        // let matched = [tile];
-        // let checkTile = null;
-        // // 대상타일 기준 8방향 체크
-        // // 좌상단
-        // checkTile = (tile.tileW > 0 && tile.tileH > 0 ) ? this.map[tile.tileW-1][tile.tileH-1] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 상단
-        // checkTile = (tile.tileH > 0) ? this.map[tile.tileW][tile.tileH-1] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 우상단
-        // checkTile = (tile.tileW < this.mapWidth-1 && tile.tileH > 0) ? this.map[tile.tileW+1][tile.tileH-1] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 좌측
-        // checkTile = (tile.tileW > 0) ? this.map[tile.tileW-1][tile.tileH] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 우측
-        // checkTile = (tile.tileW < this.mapWidth-1) ? this.map[tile.tileW+1][tile.tileH] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 좌하단
-        // checkTile = (tile.tileW > 0 && tile.tileH < this.mapHeight-1) ? this.map[tile.tileW-1][tile.tileH+1] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 하단
-        // checkTile = (tile.tileH < this.mapHeight-1) ? this.map[tile.tileW][tile.tileH+1] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 우하단
-        // checkTile = (tile.tileW < this.mapWidth-1 && tile.tileH < this.mapHeight-1) ? this.map[tile.tileW+1][tile.tileH+1] : null;
-        // if( checkTile && checkTile.level === tile.level ) {
-        //     if( matched.indexOf(checkTile) === -1 ) {
-        //         matched.push(checkTile);
-        //     }
-        // }
-        // // 매치된 타일 처리
-        // if( matched.length >= 3 ) {
-        //     let newLevelNumber = tile.level;
-        //     newLevelNumber++;
-        //     const zeroTile = this.modelMgr.getModelByLevelNumber(0);
-        //     const levelUpTileSource = this.modelMgr.getModelByLevelNumber(newLevelNumber);
-        //     if( levelUpTileSource ) { // 레벨업 타일이 있다면 다른 타일들을 제거하고 새 타일로 교체함
-        //         // 제거
-        //         for(let i = 0; i < matched.length; i++) {
-        //             if( matched[i].tileW === tile.tileW && matched[i].tileH === tile.tileH ) { 
-        //                 // 대상타일은 레벨업 타일로 교체
-        //                 const newTile = levelUpTileSource.clone();
-        //                 newTile.position.copy(matched[i].object.position);
-        //                 this.scene.add(newTile);
-        //                 this.scene.remove(matched[i].object);
-        //                 matched[i].object = newTile;
-        //                 matched[i].level = newLevelNumber;
-        //             } else {
-        //                 // 대상타일이 아닌것은 0레벨 타일로 교체
-        //                 const emptyTile = zeroTile.clone();
-        //                 emptyTile.position.copy(matched[i].object.position);
-        //                 this.scene.add(emptyTile);
-        //                 this.scene.remove(matched[i].object);
-        //                 matched[i].object = emptyTile;
-        //                 matched[i].level = 0;
-        //             }
-        //         }
-        //     } else { // 최대레벨이 3매치가 성사되었다면
-        //         // 매치된 타일 전체를 제거하고, 빈타일로 만든다.
-        //         for(let i = 0; i < matched.length; i++) {
-        //             const emptyTile = zeroTile.clone();
-        //             emptyTile.position.copy(matched[i].object.position);
-        //             this.scene.add(emptyTile);
-        //             this.scene.remove(matched[i].object);
-        //             matched[i].object = emptyTile;
-        //             matched[i].level = 0;
-        //         }
-        //         console.warn('최대레벨 타일 매치됨.');
-        //     }
-        // }
+        if (tile.level === 0) {
+            return;
+        }
+        var matched = [tile];
+        // 대상타일 기준 상하좌우체크
+        // 상단
+        var topTile = (tile.tileH > 0) ? this.map[tile.tileW][tile.tileH - 1] : null;
+        if (topTile && topTile.level === tile.level) {
+            if (matched.indexOf(topTile) === -1) {
+                matched.push(topTile);
+            }
+        }
+        // 하단
+        var bottomTile = (tile.tileH < this.mapHeight - 1) ? this.map[tile.tileW][tile.tileH + 1] : null;
+        if (bottomTile && bottomTile.level === tile.level) {
+            if (matched.indexOf(bottomTile) === -1) {
+                matched.push(bottomTile);
+            }
+        }
+        // 좌측
+        var leftTile = (tile.tileW > 0) ? this.map[tile.tileW - 1][tile.tileH] : null;
+        if (leftTile && leftTile.level === tile.level) {
+            if (matched.indexOf(leftTile) === -1) {
+                matched.push(leftTile);
+            }
+        }
+        // 우측
+        var rightTile = (tile.tileW < this.mapWidth - 1) ? this.map[tile.tileW + 1][tile.tileH] : null;
+        if (rightTile && rightTile.level === tile.level) {
+            if (matched.indexOf(rightTile) === -1) {
+                matched.push(rightTile);
+            }
+        }
+        // 좌상단타일은 상단이나 좌측타일이 같을경우만 처리
+        var leftTopTile = (tile.tileW > 0 && tile.tileH > 0) ? this.map[tile.tileW - 1][tile.tileH - 1] : null;
+        if (leftTopTile && leftTopTile.level === tile.level) {
+            if (leftTopTile.level === topTile.level || leftTopTile.level === leftTile.level) {
+                if (matched.indexOf(leftTopTile) === -1) {
+                    matched.push(leftTopTile);
+                }
+            }
+        }
+        // 우상단타일은 상단이나 우측 타일이 같을 경우만 처리
+        var rightTopTile = (tile.tileW < this.mapWidth - 1 && tile.tileH > 0) ? this.map[tile.tileW + 1][tile.tileH - 1] : null;
+        if (rightTopTile && rightTopTile.level === tile.level) {
+            if (rightTopTile.level === topTile.level || rightTopTile.level === rightTile.level) {
+                if (matched.indexOf(rightTopTile) === -1) {
+                    matched.push(rightTopTile);
+                }
+            }
+        }
+        // 좌하단타일은 좌측이나 하단 타일이 같을 경우만
+        var leftBottomTile = (tile.tileW > 0 && tile.tileH < this.mapHeight - 1) ? this.map[tile.tileW - 1][tile.tileH + 1] : null;
+        if (leftBottomTile && leftBottomTile.level === tile.level) {
+            if (leftBottomTile.level === leftTile.level || leftBottomTile.level === bottomTile.level) {
+                if (matched.indexOf(leftBottomTile) === -1) {
+                    matched.push(leftBottomTile);
+                }
+            }
+        }
+        // 우하단타일은 우측이나 하단 타일이 같을 경우만
+        var rightBottomTile = (tile.tileW < this.mapWidth - 1 && tile.tileH < this.mapHeight - 1) ? this.map[tile.tileW + 1][tile.tileH + 1] : null;
+        if (rightBottomTile && rightBottomTile.level === tile.level) {
+            if (rightBottomTile.level === rightTile.level || rightBottomTile.level === bottomTile.level) {
+                if (matched.indexOf(rightBottomTile) === -1) {
+                    matched.push(rightBottomTile);
+                }
+            }
+        }
+        // 대상타일 기준 상하좌우 2간격 거리 체크
+        var topDoubleTile = (tile.tileH - 1 > 0) ? this.map[tile.tileW][tile.tileH - 2] : null;
+        if (topDoubleTile && topDoubleTile.level === tile.level && topDoubleTile.level === topTile.level) {
+            if (matched.indexOf(topDoubleTile) === -1) {
+                matched.push(topDoubleTile);
+            }
+        }
+        var bottomDoubleTile = (tile.tileH + 1 < this.mapHeight - 1) ? this.map[tile.tileW][tile.tileH + 2] : null;
+        if (bottomDoubleTile && bottomDoubleTile.level === tile.level && bottomDoubleTile.level === bottomTile.level) {
+            if (matched.indexOf(bottomDoubleTile) === -1) {
+                matched.push(bottomDoubleTile);
+            }
+        }
+        var leftDoubleTile = (tile.tileW - 1 > 0) ? this.map[tile.tileW - 2][tile.tileH] : null;
+        if (leftDoubleTile && leftDoubleTile.level === tile.level && leftDoubleTile.level === leftTile.level) {
+            if (matched.indexOf(leftDoubleTile) === -1) {
+                matched.push(leftDoubleTile);
+            }
+        }
+        var rightDoubleTile = (tile.tileW + 1 < this.mapWidth - 1) ? this.map[tile.tileW + 2][tile.tileH] : null;
+        if (rightDoubleTile && rightDoubleTile.level === tile.level && rightDoubleTile.level === rightTile.level) {
+            if (matched.indexOf(rightDoubleTile) === -1) {
+                matched.push(rightDoubleTile);
+            }
+        }
+        // 매치된 타일 처리
+        if (matched.length >= 3) {
+            var newLevelNumber = tile.level;
+            newLevelNumber++;
+            var zeroTile = this.modelMgr.getModelByLevelNumber(0);
+            var levelUpTileSource = this.modelMgr.getModelByLevelNumber(newLevelNumber);
+            if (levelUpTileSource) { // 레벨업 타일이 있다면 다른 타일들을 제거하고 새 타일로 교체함
+                // 제거
+                for (var i = 0; i < matched.length; i++) {
+                    if (matched[i].tileW === tile.tileW && matched[i].tileH === tile.tileH) {
+                        // 대상타일은 레벨업 타일로 교체
+                        var newTile = levelUpTileSource.clone();
+                        newTile.position.copy(matched[i].object.position);
+                        this.scene.add(newTile);
+                        this.scene.remove(matched[i].object);
+                        matched[i].object = newTile;
+                        matched[i].level = newLevelNumber;
+                    }
+                    else {
+                        // 대상타일이 아닌것은 0레벨 타일로 교체
+                        var emptyTile = zeroTile.clone();
+                        emptyTile.position.copy(matched[i].object.position);
+                        this.scene.add(emptyTile);
+                        this.scene.remove(matched[i].object);
+                        matched[i].object = emptyTile;
+                        matched[i].level = 0;
+                    }
+                }
+            }
+            else { // 최대레벨이 3매치가 성사되었다면
+                // 매치된 타일 전체를 제거하고, 빈타일로 만든다.
+                for (var i = 0; i < matched.length; i++) {
+                    var emptyTile = zeroTile.clone();
+                    emptyTile.position.copy(matched[i].object.position);
+                    this.scene.add(emptyTile);
+                    this.scene.remove(matched[i].object);
+                    matched[i].object = emptyTile;
+                    matched[i].level = 0;
+                }
+                console.warn('최대레벨 타일 매치됨.');
+            }
+            // 매치된 타일처리후에 매치된것이 있을수 있으므로
+            this.checkTriple(tile);
+        }
     };
     return Board;
 }());
