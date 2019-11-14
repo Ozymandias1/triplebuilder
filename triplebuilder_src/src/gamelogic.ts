@@ -62,7 +62,7 @@ export class GameLogic {
             if( tile.level === 0 ) {
 
                 if( this.cursor ) {
-                    this.cursor.position.copy(tile.object.position);
+                    this.cursor.position.copy(pickObject.position);
                     this.cursor.userData['pickedTile'] = tile;
                     this.scene.add(this.cursor);
                 }
@@ -139,7 +139,7 @@ export class GameLogic {
      */
     createCursor() {
 
-        const level = THREEMATH.randInt(1,4);
+        const level = THREEMATH.randInt(1,5);
         const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성

@@ -53940,6 +53940,7 @@ var Board = /** @class */ (function () {
                     plate.updateMatrixWorld(true);
                     plate.userData['linkedTile'] = mapData;
                     this.plates.push(plate);
+                    mapData.object = null;
                 }
             }
         }
@@ -54341,7 +54342,7 @@ var GameLogic = /** @class */ (function () {
             var tile = pickObject.userData['linkedTile'];
             if (tile.level === 0) {
                 if (this.cursor) {
-                    this.cursor.position.copy(tile.object.position);
+                    this.cursor.position.copy(pickObject.position);
                     this.cursor.userData['pickedTile'] = tile;
                     this.scene.add(this.cursor);
                 }
@@ -54414,7 +54415,7 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.createCursor = function () {
         var _this = this;
-        var level = three_1.Math.randInt(1, 4);
+        var level = three_1.Math.randInt(1, 5);
         var sourceObject = this.modelMgr.getModelByLevelNumber(level);
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if (sourceObject) {
@@ -54493,18 +54494,26 @@ var ModelManager = /** @class */ (function () {
             { key: 'level1', url: 'models/Level1.obj' },
             { key: 'level2', url: 'models/Level2.obj' },
             { key: 'level3', url: 'models/Level3.obj' },
-            { key: 'level4', url: 'models/Level4.obj' }
+            { key: 'level4', url: 'models/Level4.obj' },
+            { key: 'level5', url: 'models/Level5.obj' }
         ];
         // let offset = 0;
         new MTLLoader_1.MTLLoader().load('models/materials.mtl', function (materials) {
             materials.preload();
             objUrls.forEach(function (element, index) {
                 new OBJLoader_1.OBJLoader().setMaterials(materials).load(element.url, function (object) {
+                    // 객체 바운딩 계산
+                    var bounding = new three_1.Box3().setFromObject(object);
+                    var size = new three_1.Vector3();
+                    bounding.getSize(size);
+                    var longestLength = Math.max(size.x, size.z);
+                    var scaleRatio = 10 / longestLength;
                     // 객체 그림자 On
                     object.traverse(function (child) {
                         if (child instanceof three_1.Mesh) {
-                            child.geometry.scale(5, 5, 5);
+                            child.geometry.scale(scaleRatio, scaleRatio, scaleRatio);
                             child.geometry.rotateY(Math.PI);
+                            child.geometry.translate(0, 0.5, 0);
                             child.castShadow = true;
                             child.receiveShadow = true;
                         }

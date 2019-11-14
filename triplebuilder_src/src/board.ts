@@ -99,6 +99,7 @@ export class Board {
                     plate.updateMatrixWorld(true);
                     plate.userData['linkedTile'] = mapData;
                     this.plates.push(plate);
+                    mapData.object = null;
                 }
             }
         }

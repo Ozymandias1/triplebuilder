@@ -1,4 +1,4 @@
-import { Mesh, Scene, BoxBufferGeometry, MeshPhongMaterial, StringKeyframeTrack, Object3D } from "three";
+import { Mesh, Scene, BoxBufferGeometry, MeshPhongMaterial, StringKeyframeTrack, Object3D, Box3, Vector3 } from "three";
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 
@@ -35,7 +35,8 @@ export class ModelManager {
             { key: 'level1', url: 'models/Level1.obj' },
             { key: 'level2', url: 'models/Level2.obj' },
             { key: 'level3', url: 'models/Level3.obj' },
-            { key: 'level4', url: 'models/Level4.obj' }
+            { key: 'level4', url: 'models/Level4.obj' },
+            { key: 'level5', url: 'models/Level5.obj' }
         ];
         // let offset = 0;
         new MTLLoader().load(
@@ -49,11 +50,19 @@ export class ModelManager {
                         element.url,
                         function (object) {
 
+                            // 객체 바운딩 계산
+                            const bounding = new Box3().setFromObject(object);
+                            const size = new Vector3();
+                            bounding.getSize(size);
+                            const longestLength = Math.max(size.x, size.z);
+                            const scaleRatio = 10 / longestLength;
+
                             // 객체 그림자 On
                             object.traverse( child => {
                                 if( child instanceof Mesh ) {
-                                    child.geometry.scale(5,5,5);
+                                    child.geometry.scale(scaleRatio, scaleRatio, scaleRatio);
                                     child.geometry.rotateY(Math.PI);
+                                    child.geometry.translate(0, 0.5, 0);
                                     child.castShadow = true;
                                     child.receiveShadow = true;
                                 }
