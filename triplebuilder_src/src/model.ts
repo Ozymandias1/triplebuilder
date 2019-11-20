@@ -111,4 +111,47 @@ export class ModelManager {
         }
 
     }
+
+    test() {
+        const scope = this;
+        new MTLLoader().load(
+            'models/buildingtiles.mtl',
+            function( materials ) {
+                materials.preload();
+
+                new OBJLoader().setMaterials(materials).load(
+                    'models/buildingtiles.obj',
+                    function(object) {
+                        
+                        // 객체 그림자 On
+                        object.traverse( child => {
+                            if( child instanceof Mesh ) {
+                                //child.geometry.scale(scaleRatio, scaleRatio, scaleRatio);
+                                //child.geometry.rotateY(Math.PI);
+                                //child.geometry.translate(0, 0.5, 0);
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                            }
+                        });
+
+                        // 자식객체 visible 테스트
+                        for(let i = 0; i < object.children.length; i++) {
+                            const child = object.children[i];
+                            if( child.name.toLowerCase() === 'level0' || child.name.toLowerCase() === 'level1' ) {
+                                child.visible = true;
+                            } else {
+                                child.visible = false;
+                            }
+                        }
+
+                        object.position.set(50, 10, 50);
+
+                        scope.scene.add(object);
+
+                        console.log(object);
+                    }
+                );
+            }
+        );
+    }
 }

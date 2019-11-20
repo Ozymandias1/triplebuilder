@@ -54550,6 +54550,37 @@ var ModelManager = /** @class */ (function () {
             return null;
         }
     };
+    ModelManager.prototype.test = function () {
+        var scope = this;
+        new MTLLoader_1.MTLLoader().load('models/buildingtiles.mtl', function (materials) {
+            materials.preload();
+            new OBJLoader_1.OBJLoader().setMaterials(materials).load('models/buildingtiles.obj', function (object) {
+                // 객체 그림자 On
+                object.traverse(function (child) {
+                    if (child instanceof three_1.Mesh) {
+                        //child.geometry.scale(scaleRatio, scaleRatio, scaleRatio);
+                        //child.geometry.rotateY(Math.PI);
+                        //child.geometry.translate(0, 0.5, 0);
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                // 자식객체 visible 테스트
+                for (var i = 0; i < object.children.length; i++) {
+                    var child = object.children[i];
+                    if (child.name.toLowerCase() === 'level0' || child.name.toLowerCase() === 'level1') {
+                        child.visible = true;
+                    }
+                    else {
+                        child.visible = false;
+                    }
+                }
+                object.position.set(50, 10, 50);
+                scope.scene.add(object);
+                console.log(object);
+            });
+        });
+    };
     return ModelManager;
 }());
 exports.ModelManager = ModelManager;
