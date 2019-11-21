@@ -110,25 +110,9 @@ export class GameLogic {
                     this.scene.remove(targetTile.object);
                     targetTile.object = cloneObject;
 
-                    // 애니메이션처리
-                    for(let i = 0; i < cloneObject.children.length; i++) {
-                        const child = cloneObject.children[i];
-                        child.position.y = 100.0;
-                        new TWEEN.default.Tween(child.position)
-                        .to({
-                            y: 0
-                        }, 500)
-                        .easing(TWEEN.default.Easing.Quadratic.Out)
-                        .delay(i * 100)
-                        .onComplete(()=>{
-                            // 마지막 자식 객체의 애니메이션이 종료된 후에 체크를 수행
-                            if( i === (cloneObject.children.length-1)) {
-                                this.board.checkTriple(targetTile);
-                                this.createCursor();
-                            }
-                        })
-                        .start();
-                    }
+                    // 3타일 매치 체크
+                    this.board.checkTriple(targetTile);
+                    this.createCursor();
                 }
             }
         }

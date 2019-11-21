@@ -291,51 +291,6 @@ export class Board {
      * @param tile 애니메이션 목표 대상 타일
      */
     deleteTileObject(target: Object3D, tile: Tile) {
-
-        // 애니메이션 목표 대상 타일의 바운딩 계산
-        const bounding = new Box3().setFromObject(tile.object);
-        const center = new Vector3();
-        bounding.getCenter(center);
-
-        const childCount = target.children.length;
-        for(let i = 0; i < childCount; i++) {
-            // 루트 Scene으로 옮기는 순간 제거대상의 자식 객체 목록에서 제거되므로 
-            // 개수만큼 순환하며 0번째 것을 가져온다.
-            const child = target.children[0];
-
-            // 자식객체의 월드 좌표 계산
-            const worldPosition = child.localToWorld(new Vector3(0, 0, 0));
-            this.scene.add(child);
-
-            child.position.copy(worldPosition);
-
-            // 애니메이션처리
-            const animData = {
-                ptStart: worldPosition.clone(),
-                ptTarget: center.clone(),
-                ratio: 0.0
-            };
-            new TWEEN.default.Tween(animData)
-            .to({
-                ratio: 1.0
-            }, 500)
-            .easing(TWEEN.default.Easing.Quadratic.Out)
-            .delay(i * 100)
-            .onUpdate((data)=>{
-                // 위치, 스케일 업데이트
-                child.position.copy(
-                    new Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio)
-                );
-                child.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
-            })
-            .onComplete(()=>{
-                // 애니메이션 완료후 씬에서 제거
-                this.scene.remove(child);
-            })
-            .start();
-
-        }
-        // 위 루프문을 수행후엔 자식객체가 없는 그룹이 되므로 바로 제거
         this.scene.remove(target);
     }
 }

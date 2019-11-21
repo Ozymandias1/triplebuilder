@@ -53873,7 +53873,6 @@ var OBJLoader = ( function () {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var Tile = /** @class */ (function () {
     function Tile(w, h, level) {
         this.tileW = w;
@@ -54109,48 +54108,6 @@ var Board = /** @class */ (function () {
      * @param tile 애니메이션 목표 대상 타일
      */
     Board.prototype.deleteTileObject = function (target, tile) {
-        var _this = this;
-        // 애니메이션 목표 대상 타일의 바운딩 계산
-        var bounding = new three_1.Box3().setFromObject(tile.object);
-        var center = new three_1.Vector3();
-        bounding.getCenter(center);
-        var childCount = target.children.length;
-        var _loop_1 = function (i) {
-            // 루트 Scene으로 옮기는 순간 제거대상의 자식 객체 목록에서 제거되므로 
-            // 개수만큼 순환하며 0번째 것을 가져온다.
-            var child = target.children[0];
-            // 자식객체의 월드 좌표 계산
-            var worldPosition = child.localToWorld(new three_1.Vector3(0, 0, 0));
-            this_1.scene.add(child);
-            child.position.copy(worldPosition);
-            // 애니메이션처리
-            var animData = {
-                ptStart: worldPosition.clone(),
-                ptTarget: center.clone(),
-                ratio: 0.0
-            };
-            new TWEEN.default.Tween(animData)
-                .to({
-                ratio: 1.0
-            }, 500)
-                .easing(TWEEN.default.Easing.Quadratic.Out)
-                .delay(i * 100)
-                .onUpdate(function (data) {
-                // 위치, 스케일 업데이트
-                child.position.copy(new three_1.Vector3().lerpVectors(data.ptStart, data.ptTarget, data.ratio));
-                child.scale.set(1.0 - data.ratio, 1.0 - data.ratio, 1.0 - data.ratio);
-            })
-                .onComplete(function () {
-                // 애니메이션 완료후 씬에서 제거
-                _this.scene.remove(child);
-            })
-                .start();
-        };
-        var this_1 = this;
-        for (var i = 0; i < childCount; i++) {
-            _loop_1(i);
-        }
-        // 위 루프문을 수행후엔 자식객체가 없는 그룹이 되므로 바로 제거
         this.scene.remove(target);
     };
     return Board;
@@ -54302,7 +54259,6 @@ exports.Core = core_1.Core;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
-var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var GameLogic = /** @class */ (function () {
     function GameLogic(scene, camera, board, modelMgr) {
         this.scene = scene;
@@ -54366,46 +54322,26 @@ var GameLogic = /** @class */ (function () {
      * @param event 포인터 이벤트
      */
     GameLogic.prototype.onPointerUp = function (event) {
-        var _this = this;
         if (event.button === 0) {
             // 마우스 좌클릭의 경우 화면회전도 겸하므로
             // 포인터 다운 좌표와 업좌표사이 거리가 5.0픽셀 이하인경우 처리
             var currPointerUpPos = new three_1.Vector2(event.screenX, event.screenY);
             if (currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0) {
                 if (this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0) {
-                    var targetTile_1 = this.cursor.userData['pickedTile'];
+                    var targetTile = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
-                    targetTile_1.level = this.cursor.userData['level'];
+                    targetTile.level = this.cursor.userData['level'];
                     // 커서객체 메모리해제
-                    var cloneObject_1 = this.cursor.userData['sourceObject'].clone();
-                    cloneObject_1.position.copy(this.cursor.position);
-                    this.scene.add(cloneObject_1);
+                    var cloneObject = this.cursor.userData['sourceObject'].clone();
+                    cloneObject.position.copy(this.cursor.position);
+                    this.scene.add(cloneObject);
                     this.disposeCursor();
                     // 타일에 설정되어있던 이전 타일 객체를 제거하고 복제한 새 모델을 할당
-                    this.scene.remove(targetTile_1.object);
-                    targetTile_1.object = cloneObject_1;
-                    var _loop_1 = function (i) {
-                        var child = cloneObject_1.children[i];
-                        child.position.y = 100.0;
-                        new TWEEN.default.Tween(child.position)
-                            .to({
-                            y: 0
-                        }, 500)
-                            .easing(TWEEN.default.Easing.Quadratic.Out)
-                            .delay(i * 100)
-                            .onComplete(function () {
-                            // 마지막 자식 객체의 애니메이션이 종료된 후에 체크를 수행
-                            if (i === (cloneObject_1.children.length - 1)) {
-                                _this.board.checkTriple(targetTile_1);
-                                _this.createCursor();
-                            }
-                        })
-                            .start();
-                    };
-                    // 애니메이션처리
-                    for (var i = 0; i < cloneObject_1.children.length; i++) {
-                        _loop_1(i);
-                    }
+                    this.scene.remove(targetTile.object);
+                    targetTile.object = cloneObject;
+                    // 3타일 매치 체크
+                    this.board.checkTriple(targetTile);
+                    this.createCursor();
                 }
             }
         }
@@ -54479,62 +54415,28 @@ var ModelManager = /** @class */ (function () {
     function ModelManager(scene, onReady) {
         this.scene = scene;
         this.models = {};
-        // 기본판
-        var geometry = new three_1.BoxBufferGeometry(10, 1, 10, 1, 1, 1);
-        var material = new three_1.MeshPhongMaterial({
-            color: 0xcccccc
-        });
-        var mesh = new three_1.Mesh(geometry, material);
-        // mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        this.models['level0'] = mesh;
-        // 기본 모델들 로드
+        // 건물 타일 로드
         var scope = this;
-        var objUrls = [
-            { key: 'level1', url: 'models/Level1.obj' },
-            { key: 'level2', url: 'models/Level2.obj' },
-            { key: 'level3', url: 'models/Level3.obj' },
-            { key: 'level4', url: 'models/Level4.obj' },
-            { key: 'level5', url: 'models/Level5.obj' }
-        ];
-        // let offset = 0;
-        new MTLLoader_1.MTLLoader().load('models/materials.mtl', function (materials) {
+        new MTLLoader_1.MTLLoader().load('models/buildingtiles.mtl', function (materials) {
             materials.preload();
-            objUrls.forEach(function (element, index) {
-                new OBJLoader_1.OBJLoader().setMaterials(materials).load(element.url, function (object) {
-                    // 객체 바운딩 계산
-                    var bounding = new three_1.Box3().setFromObject(object);
-                    var size = new three_1.Vector3();
-                    bounding.getSize(size);
-                    var longestLength = Math.max(size.x, size.z);
-                    var scaleRatio = 10 / longestLength;
-                    // 객체 그림자 On
-                    object.traverse(function (child) {
-                        if (child instanceof three_1.Mesh) {
-                            child.geometry.scale(scaleRatio, scaleRatio, scaleRatio);
-                            child.geometry.rotateY(Math.PI);
-                            child.geometry.translate(0, 0.5, 0);
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    // 모델 스토리지에 저장
-                    scope.models[element.key] = object;
-                    if (Object.keys(scope.models).length === 4) {
-                        if (onReady) {
-                            onReady();
-                        }
-                    }
-                }, function (progress) { }, function (err) {
-                    if (err) {
-                        console.error(err);
+            new OBJLoader_1.OBJLoader().setMaterials(materials).load('models/buildingtiles.obj', function (object) {
+                // 객체 그림자 On
+                object.traverse(function (child) {
+                    if (child instanceof three_1.Mesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
                     }
                 });
+                // 자식객체의 이름(레벨)을 분석하여 모델 스토리지에 저장
+                for (var i = 0; i < object.children.length; i++) {
+                    var child = object.children[i];
+                    var name_1 = child.name.toLowerCase();
+                    scope.models[name_1] = child;
+                }
+                if (onReady) {
+                    onReady();
+                }
             });
-        }, function (progress) { }, function (err) {
-            if (err) {
-                console.error(err);
-            }
         });
     }
     /**
@@ -54551,35 +54453,6 @@ var ModelManager = /** @class */ (function () {
         }
     };
     ModelManager.prototype.test = function () {
-        var scope = this;
-        new MTLLoader_1.MTLLoader().load('models/buildingtiles.mtl', function (materials) {
-            materials.preload();
-            new OBJLoader_1.OBJLoader().setMaterials(materials).load('models/buildingtiles.obj', function (object) {
-                // 객체 그림자 On
-                object.traverse(function (child) {
-                    if (child instanceof three_1.Mesh) {
-                        //child.geometry.scale(scaleRatio, scaleRatio, scaleRatio);
-                        //child.geometry.rotateY(Math.PI);
-                        //child.geometry.translate(0, 0.5, 0);
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
-                // 자식객체 visible 테스트
-                for (var i = 0; i < object.children.length; i++) {
-                    var child = object.children[i];
-                    if (child.name.toLowerCase() === 'level0' || child.name.toLowerCase() === 'level1') {
-                        child.visible = true;
-                    }
-                    else {
-                        child.visible = false;
-                    }
-                }
-                object.position.set(50, 10, 50);
-                scope.scene.add(object);
-                console.log(object);
-            });
-        });
     };
     return ModelManager;
 }());
