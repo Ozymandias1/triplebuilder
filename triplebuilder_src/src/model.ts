@@ -2,13 +2,14 @@ import { Mesh, Scene, BoxBufferGeometry, MeshPhongMaterial, StringKeyframeTrack,
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 
+import * as TWEEN from '@tweenjs/tween.js';
 /**
  * 모델 관리 클래스
  */
 export class ModelManager {
 
     private scene: Scene;
-    private models: Record<string, Object3D>;
+    private models: Record<string, Mesh>;
 
     /**
      * 생성자
@@ -41,7 +42,7 @@ export class ModelManager {
                         for(let i = 0; i < object.children.length; i++) {
                             const child = object.children[i];
                             const name = child.name.toLowerCase();
-                            scope.models[name] = child;
+                            scope.models[name] = <Mesh>child;
                         }
                         
                         if( onReady ) {
@@ -69,5 +70,53 @@ export class ModelManager {
     }
 
     test() {
+        const target = <any>this.getModelByLevelNumber(1).clone();
+        this.scene.add(target);
+
+        for(let i = 0; i < target.material.length; i++) {
+
+            if( i === 0 ) {
+                console.log('original', target.uuid, i, target.material[i].uuid);
+            }
+
+            const cloned = target.material[i].clone();
+            if( i === 0 ) {
+            console.log('cloned', target.uuid, i, cloned.uuid);
+            }
+
+            cloned.transparent = true;
+
+            target.material[i] = cloned;
+            if( i === 0 ) {
+            console.log('after', target.uuid, i, target.material[i].uuid);
+            }
+
+
+        }
+        
+        new TWEEN.default.Tween({
+            opacity: 1.0
+        }).to({
+            opacity: 0.0
+        }, 500)
+        .easing(TWEEN.default.Easing.Quadratic.Out)
+        .onUpdate((data)=>{
+
+            // 재질투명도 조절
+            for (let i = 0; i < target.material.length; i++) {
+                const material = target.material[i];
+                material.opacity = data.opacity;
+                if( i === 0 ) {
+                console.log('onUpdate', target.uuid, material.uuid);
+                }
+            }
+
+            const tt = <any>this.models['level1'];
+            console.log(tt.material[0].uuid, tt.material[0].transparent, tt.material[0].opacity);
+        })
+        .onComplete((data)=>{
+        })
+        .start();
+
     }
 }

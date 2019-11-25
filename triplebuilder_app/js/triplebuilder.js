@@ -53873,6 +53873,7 @@ var OBJLoader = ( function () {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var Tile = /** @class */ (function () {
     function Tile(w, h, level) {
         this.tileW = w;
@@ -54108,7 +54109,57 @@ var Board = /** @class */ (function () {
      * @param tile 애니메이션 목표 대상 타일
      */
     Board.prototype.deleteTileObject = function (target, tile) {
-        this.scene.remove(target);
+        var _this = this;
+        // 투명 처리를 할것이므로 재질을 복제처리한다.
+        if (target.material instanceof Array) {
+            for (var i = 0; i < target.material.length; i++) {
+                var clonedMaterial = target.material[i].clone();
+                clonedMaterial.transparent = true;
+                clonedMaterial.opacity = 1.0;
+                target.material[i] = clonedMaterial;
+            }
+        }
+        else {
+            var clonedMaterial = target.material.clone();
+            clonedMaterial.transparent = true;
+            clonedMaterial.opacity = 1.0;
+            target.material = clonedMaterial;
+        }
+        // 애니메이션 처리
+        new TWEEN.default.Tween({
+            opacity: 1.0
+        }).to({
+            opacity: 0.0
+        }, 500)
+            .easing(TWEEN.default.Easing.Quadratic.Out)
+            .onUpdate(function (data) {
+            // 재질투명도 조절
+            if (target.material instanceof Array) {
+                for (var i = 0; i < target.material.length; i++) {
+                    var material = target.material[i];
+                    material.opacity = data.opacity;
+                }
+            }
+            else {
+                target.material.opacity = data.opacity;
+            }
+        })
+            .onComplete(function (data) {
+            // 애니메이션이 완료되면 씬에서 제거하고 재질의 메모리를 해제
+            _this.scene.remove(target);
+            if (target.material instanceof Array) {
+                for (var i = 0; i < target.material.length; i++) {
+                    var material = target.material[i];
+                    material.dispose();
+                    console.log(material.uuid);
+                }
+            }
+            else {
+                target.material.dispose();
+                console.log(target.material.uuid);
+            }
+        })
+            .start();
     };
     return Board;
 }());
@@ -54259,6 +54310,7 @@ exports.Core = core_1.Core;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var GameLogic = /** @class */ (function () {
     function GameLogic(scene, camera, board, modelMgr) {
         this.scene = scene;
@@ -54322,26 +54374,84 @@ var GameLogic = /** @class */ (function () {
      * @param event 포인터 이벤트
      */
     GameLogic.prototype.onPointerUp = function (event) {
+        var _this = this;
         if (event.button === 0) {
             // 마우스 좌클릭의 경우 화면회전도 겸하므로
             // 포인터 다운 좌표와 업좌표사이 거리가 5.0픽셀 이하인경우 처리
             var currPointerUpPos = new three_1.Vector2(event.screenX, event.screenY);
             if (currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0) {
                 if (this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0) {
-                    var targetTile = this.cursor.userData['pickedTile'];
+                    var targetTile_1 = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
-                    targetTile.level = this.cursor.userData['level'];
-                    // 커서객체 메모리해제
+                    targetTile_1.level = this.cursor.userData['level'];
+                    // 커서객체 메모리해제 및 복제
                     var cloneObject = this.cursor.userData['sourceObject'].clone();
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
                     // 타일에 설정되어있던 이전 타일 객체를 제거하고 복제한 새 모델을 할당
-                    this.scene.remove(targetTile.object);
-                    targetTile.object = cloneObject;
-                    // 3타일 매치 체크
-                    this.board.checkTriple(targetTile);
-                    this.createCursor();
+                    this.scene.remove(targetTile_1.object);
+                    targetTile_1.object = cloneObject;
+                    // 애니메이션 처리
+                    targetTile_1.object.position.y = -30;
+                    new TWEEN.default.Tween(targetTile_1.object.position)
+                        .to({
+                        y: 0
+                    }, 500)
+                        .easing(TWEEN.default.Easing.Quadratic.Out)
+                        .onComplete(function () {
+                        // 3타일 매치 체크
+                        //this.board.checkTriple(targetTile);
+                        //this.createCursor();
+                        // 재질투명도 조절
+                        if (targetTile_1.object.material instanceof Array) {
+                            for (var i = 0; i < targetTile_1.object.material.length; i++) {
+                                targetTile_1.object.material[i] = targetTile_1.object.material[i].clone();
+                                targetTile_1.object.material[i].transparent = true;
+                            }
+                        }
+                        else {
+                            targetTile_1.object.material = targetTile_1.object.material.clone();
+                            targetTile_1.object.material.transparent = true;
+                        }
+                        // 투명애니메이션 테스트
+                        // 애니메이션 처리
+                        new TWEEN.default.Tween({
+                            opacity: 1.0
+                        }).to({
+                            opacity: 0.0
+                        }, 500)
+                            .easing(TWEEN.default.Easing.Quadratic.Out)
+                            .onUpdate(function (data) {
+                            // 재질투명도 조절
+                            if (targetTile_1.object.material instanceof Array) {
+                                for (var i = 0; i < targetTile_1.object.material.length; i++) {
+                                    var material = targetTile_1.object.material[i];
+                                    material.opacity = data.opacity;
+                                }
+                            }
+                            else {
+                                targetTile_1.object.material.opacity = data.opacity;
+                            }
+                        })
+                            .onComplete(function (data) {
+                            // 애니메이션이 완료되면 씬에서 제거하고 재질의 메모리를 해제
+                            _this.scene.remove(targetTile_1.object);
+                            if (targetTile_1.object.material instanceof Array) {
+                                for (var i = 0; i < targetTile_1.object.material.length; i++) {
+                                    var material = targetTile_1.object.material[i];
+                                    material.dispose();
+                                }
+                            }
+                            else {
+                                targetTile_1.object.material.dispose();
+                            }
+                            _this.createCursor();
+                        })
+                            .delay(500)
+                            .start();
+                    })
+                        .start();
                 }
             }
         }
@@ -54351,7 +54461,7 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.createCursor = function () {
         var _this = this;
-        var level = three_1.Math.randInt(1, 5);
+        var level = 1; //const level = THREEMATH.randInt(1,4);
         var sourceObject = this.modelMgr.getModelByLevelNumber(level);
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if (sourceObject) {
@@ -54405,6 +54515,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var MTLLoader_1 = __webpack_require__(/*! three/examples/jsm/loaders/MTLLoader */ "./node_modules/three/examples/jsm/loaders/MTLLoader.js");
 var OBJLoader_1 = __webpack_require__(/*! three/examples/jsm/loaders/OBJLoader */ "./node_modules/three/examples/jsm/loaders/OBJLoader.js");
+var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 /**
  * 모델 관리 클래스
  */
@@ -54453,6 +54564,44 @@ var ModelManager = /** @class */ (function () {
         }
     };
     ModelManager.prototype.test = function () {
+        var _this = this;
+        var target = this.getModelByLevelNumber(1).clone();
+        this.scene.add(target);
+        for (var i = 0; i < target.material.length; i++) {
+            if (i === 0) {
+                console.log('original', target.uuid, i, target.material[i].uuid);
+            }
+            var cloned = target.material[i].clone();
+            if (i === 0) {
+                console.log('cloned', target.uuid, i, cloned.uuid);
+            }
+            cloned.transparent = true;
+            target.material[i] = cloned;
+            if (i === 0) {
+                console.log('after', target.uuid, i, target.material[i].uuid);
+            }
+        }
+        new TWEEN.default.Tween({
+            opacity: 1.0
+        }).to({
+            opacity: 0.0
+        }, 500)
+            .easing(TWEEN.default.Easing.Quadratic.Out)
+            .onUpdate(function (data) {
+            // 재질투명도 조절
+            for (var i = 0; i < target.material.length; i++) {
+                var material = target.material[i];
+                material.opacity = data.opacity;
+                if (i === 0) {
+                    console.log('onUpdate', target.uuid, material.uuid);
+                }
+            }
+            var tt = _this.models['level1'];
+            console.log(tt.material[0].uuid, tt.material[0].transparent, tt.material[0].opacity);
+        })
+            .onComplete(function (data) {
+        })
+            .start();
     };
     return ModelManager;
 }());

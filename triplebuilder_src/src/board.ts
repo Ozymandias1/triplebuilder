@@ -253,6 +253,7 @@ export class Board {
                         this.scene.remove(matched[i].object);
                         matched[i].object = newTile;
                         matched[i].level = newLevelNumber;
+
                     } else {
 
                         // 대상타일이 아닌것은 0레벨 타일로 교체
@@ -260,7 +261,7 @@ export class Board {
                         emptyTile.position.copy(matched[i].object.position);
                         this.scene.add(emptyTile);
 
-                        this.deleteTileObject(matched[i].object, tile);
+                        this.deleteTileObject(<Mesh>matched[i].object, tile);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
                     }
@@ -273,7 +274,7 @@ export class Board {
                     emptyTile.position.copy(matched[i].object.position);
                     this.scene.add(emptyTile);
 
-                    this.deleteTileObject(matched[i].object, tile);
+                    this.deleteTileObject(<Mesh>matched[i].object, tile);
                     matched[i].object = emptyTile;
                     matched[i].level = 0;
                 }
@@ -290,7 +291,61 @@ export class Board {
      * @param target 제거 대상
      * @param tile 애니메이션 목표 대상 타일
      */
-    deleteTileObject(target: Object3D, tile: Tile) {
-        this.scene.remove(target);
+    deleteTileObject(target: Mesh, tile: Tile) {
+
+        // 투명 처리를 할것이므로 재질을 복제처리한다.
+        if (target.material instanceof Array) {
+
+            for (let i = 0; i < target.material.length; i++) {
+                const clonedMaterial = target.material[i].clone();
+                clonedMaterial.transparent = true;
+                clonedMaterial.opacity = 1.0;
+                target.material[i] = clonedMaterial;
+            }
+
+        } else {
+
+            const clonedMaterial = target.material.clone();
+            clonedMaterial.transparent = true;
+            clonedMaterial.opacity = 1.0;
+            target.material = clonedMaterial;
+
+        }
+
+        // 애니메이션 처리
+        new TWEEN.default.Tween({
+            opacity: 1.0
+        }).to({
+            opacity: 0.0
+        }, 500)
+        .easing(TWEEN.default.Easing.Quadratic.Out)
+        .onUpdate((data)=>{
+
+            // 재질투명도 조절
+            if (target.material instanceof Array) {
+                for (let i = 0; i < target.material.length; i++) {
+                    const material = target.material[i];
+                    material.opacity = data.opacity;
+                }
+            } else {
+                target.material.opacity = data.opacity;
+            }
+        })
+        .onComplete((data)=>{
+            // 애니메이션이 완료되면 씬에서 제거하고 재질의 메모리를 해제
+            this.scene.remove(target);
+
+            if (target.material instanceof Array) {
+                for (let i = 0; i < target.material.length; i++) {
+                    const material = target.material[i];
+                    material.dispose();
+                    console.log(material.uuid);
+                }
+            } else {
+                target.material.dispose();
+                console.log(target.material.uuid);
+            }
+        })
+        .start();
     }
 }
