@@ -100,8 +100,8 @@ export class GameLogic {
                     // 타일의 레벨을 커서객체 레벨로 설정
                     targetTile.level = this.cursor.userData['level'];
                     
-                    // 커서객체 메모리해제 및 복제
-                    const cloneObject = this.cursor.userData['sourceObject'].clone();
+                    // 커서객체 메모리해제
+                    const cloneObject = this.cursor.userData['sourceObject'];
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
@@ -119,55 +119,8 @@ export class GameLogic {
                     .easing(TWEEN.default.Easing.Quadratic.Out)
                     .onComplete(()=>{
                         // 3타일 매치 체크
-                        //this.board.checkTriple(targetTile);
-                        //this.createCursor();
-
-                                // 재질투명도 조절
-                                if (targetTile.object.material instanceof Array) {
-                                    for (let i = 0; i < targetTile.object.material.length; i++) {
-                                        targetTile.object.material[i] = targetTile.object.material[i].clone();
-                                        targetTile.object.material[i].transparent = true;
-                                    }
-                                } else {
-                                    targetTile.object.material = targetTile.object.material.clone();
-                                    targetTile.object.material.transparent = true;
-                                }
-                                // 투명애니메이션 테스트
-                                // 애니메이션 처리
-                                new TWEEN.default.Tween({
-                                    opacity: 1.0
-                                }).to({
-                                    opacity: 0.0
-                                }, 500)
-                                    .easing(TWEEN.default.Easing.Quadratic.Out)
-                                    .onUpdate((data) => {
-
-                                        // 재질투명도 조절
-                                        if (targetTile.object.material instanceof Array) {
-                                            for (let i = 0; i < targetTile.object.material.length; i++) {
-                                                const material = targetTile.object.material[i];
-                                                material.opacity = data.opacity;
-                                            }
-                                        } else {
-                                            targetTile.object.material.opacity = data.opacity;
-                                        }
-                                    })
-                                    .onComplete((data) => {
-                                        // 애니메이션이 완료되면 씬에서 제거하고 재질의 메모리를 해제
-                                        this.scene.remove(targetTile.object);
-
-                                        if (targetTile.object.material instanceof Array) {
-                                            for (let i = 0; i < targetTile.object.material.length; i++) {
-                                                const material = targetTile.object.material[i];
-                                                material.dispose();
-                                            }
-                                        } else {
-                                            targetTile.object.material.dispose();
-                                        }
-                                        this.createCursor();    
-                                    })
-                                    .delay(500)
-                                    .start();
+                        this.board.checkTriple(targetTile);
+                        this.createCursor();
                     })
                     .start();
                 }

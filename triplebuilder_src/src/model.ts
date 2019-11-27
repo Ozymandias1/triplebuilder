@@ -1,4 +1,4 @@
-import { Mesh, Scene, BoxBufferGeometry, MeshPhongMaterial, StringKeyframeTrack, Object3D, Box3, Vector3 } from "three";
+import { Mesh, Scene, BoxBufferGeometry, MeshPhongMaterial, StringKeyframeTrack, Object3D, Box3, Vector3, MeshPhysicalMaterial, Material } from "three";
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 
@@ -62,7 +62,33 @@ export class ModelManager {
 
         const key = 'level' + levelNo;
         if( this.models.hasOwnProperty(key) ) {
-            return this.models[key];
+            // 모델의 Geometry와 Material정보로 새 Mesh를 생성하여 반환한다.
+            if( this.models[key].material instanceof Array ) {
+                
+                const source = (this.models[key].material as MeshPhongMaterial[]);
+                const materials = [];
+                for(let i = 0; i < source.length; i++) {
+                    const material = new MeshPhongMaterial();
+                    material.copy( source[i] );
+                    materials.push(material);
+                }
+
+                const newMesh = new Mesh( this.models[key].geometry, materials );
+                newMesh.castShadow = true;
+                newMesh.receiveShadow = true;
+                return newMesh;
+
+            } else {
+
+                const material = new MeshPhongMaterial();
+                material.copy( <MeshPhongMaterial>this.models[key].material );
+
+                const newMesh = new Mesh( this.models[key].geometry, material );
+                newMesh.castShadow = true;
+                newMesh.receiveShadow = true;
+                return newMesh;
+
+            }
         } else {
             return null;
         }

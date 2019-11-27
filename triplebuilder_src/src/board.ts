@@ -87,7 +87,7 @@ export class Board {
                 const mapData = this.map[w][h];
                 const model = this.modelMgr.getModelByLevelNumber(mapData.level);
                 if( model ) {
-                    mapData.object = model.clone();
+                    mapData.object = model;
                     mapData.object.position.x = w * this.tileSize;
                     mapData.object.position.z = h * this.tileSize;
                     this.scene.add(mapData.object);
@@ -245,19 +245,41 @@ export class Board {
                 for(let i = 0; i < matched.length; i++) {
                     if( matched[i].tileW === tile.tileW && matched[i].tileH === tile.tileH ) { 
 
-                        // 대상타일은 레벨업 타일로 교체
-                        const newTile = levelUpTileSource.clone();
-                        newTile.position.copy(matched[i].object.position);
-                        this.scene.add(newTile);
+                        // // 대상타일은 레벨업 타일로 교체
+                        // const newTile = levelUpTileSource;
+                        // newTile.position.copy(matched[i].object.position);
+                        // this.scene.add(newTile);
 
-                        this.scene.remove(matched[i].object);
-                        matched[i].object = newTile;
-                        matched[i].level = newLevelNumber;
+                        // this.scene.remove(matched[i].object);
+                        // matched[i].object = newTile;
+                        // matched[i].level = newLevelNumber;
+
+                        // 대상타일은 제거후 생성
+                        levelUpTileSource.position.copy(matched[i].object.position);
+                        this.deleteTileObject(<Mesh>matched[i].object, tile, () =>{
+                            // 대상타일 제거가 완료되면 레벨업 타일을 생성
+                            levelUpTileSource.position.y = -30;
+                            this.scene.add(levelUpTileSource);
+                            // 생성 애니메이션 처리
+                            new TWEEN.default.Tween(levelUpTileSource.position)
+                            .to({
+                                y:0
+                            }, 500)
+                            .easing(TWEEN.default.Easing.Quadratic.Out)
+                            .onComplete(()=>{
+                                matched[i].object = levelUpTileSource;
+                                matched[i].level = newLevelNumber;
+                                
+                                // 매치된 타일처리후에 매치된것이 있을수 있으므로
+                                this.checkTriple(matched[i]);
+                            })
+                            .start();
+                        });
 
                     } else {
 
                         // 대상타일이 아닌것은 0레벨 타일로 교체
-                        const emptyTile = zeroTile.clone();
+                        const emptyTile = zeroTile;
                         emptyTile.position.copy(matched[i].object.position);
                         this.scene.add(emptyTile);
 
@@ -266,11 +288,12 @@ export class Board {
                         matched[i].level = 0;
                     }
                 }
+
             } else { // 최대레벨이 3매치가 성사되었다면
 
                 // 매치된 타일 전체를 제거하고, 빈타일로 만든다.
                 for(let i = 0; i < matched.length; i++) {
-                    const emptyTile = zeroTile.clone();
+                    const emptyTile = zeroTile;
                     emptyTile.position.copy(matched[i].object.position);
                     this.scene.add(emptyTile);
 
@@ -280,9 +303,6 @@ export class Board {
                 }
                 console.warn('최대레벨 타일 매치됨.');
             }
-
-            // 매치된 타일처리후에 매치된것이 있을수 있으므로
-            this.checkTriple(tile);
         }
     }
 
@@ -291,24 +311,20 @@ export class Board {
      * @param target 제거 대상
      * @param tile 애니메이션 목표 대상 타일
      */
-    deleteTileObject(target: Mesh, tile: Tile) {
+    deleteTileObject(target: Mesh, tile: Tile, onComplete?: Function) {
 
         // 투명 처리를 할것이므로 재질을 복제처리한다.
         if (target.material instanceof Array) {
 
             for (let i = 0; i < target.material.length; i++) {
-                const clonedMaterial = target.material[i].clone();
+                const clonedMaterial = target.material[i];
                 clonedMaterial.transparent = true;
-                clonedMaterial.opacity = 1.0;
-                target.material[i] = clonedMaterial;
             }
 
         } else {
 
-            const clonedMaterial = target.material.clone();
+            const clonedMaterial = target.material;
             clonedMaterial.transparent = true;
-            clonedMaterial.opacity = 1.0;
-            target.material = clonedMaterial;
 
         }
 
@@ -339,11 +355,13 @@ export class Board {
                 for (let i = 0; i < target.material.length; i++) {
                     const material = target.material[i];
                     material.dispose();
-                    console.log(material.uuid);
                 }
             } else {
                 target.material.dispose();
-                console.log(target.material.uuid);
+            }
+
+            if( onComplete ) {
+                onComplete();
             }
         })
         .start();

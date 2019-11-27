@@ -53929,7 +53929,7 @@ var Board = /** @class */ (function () {
                 var mapData = this.map[w][h];
                 var model = this.modelMgr.getModelByLevelNumber(mapData.level);
                 if (model) {
-                    mapData.object = model.clone();
+                    mapData.object = model;
                     mapData.object.position.x = w * this.tileSize;
                     mapData.object.position.z = h * this.tileSize;
                     this.scene.add(mapData.object);
@@ -53964,6 +53964,7 @@ var Board = /** @class */ (function () {
      * @param tile 타일 객체
      */
     Board.prototype.checkTriple = function (tile) {
+        var _this = this;
         if (tile.level === 0) {
             return;
         }
@@ -54060,37 +54061,61 @@ var Board = /** @class */ (function () {
         }
         // 매치된 타일 처리
         if (matched.length >= 3) {
-            var newLevelNumber = tile.level;
-            newLevelNumber++;
+            var newLevelNumber_1 = tile.level;
+            newLevelNumber_1++;
             var zeroTile = this.modelMgr.getModelByLevelNumber(0);
-            var levelUpTileSource = this.modelMgr.getModelByLevelNumber(newLevelNumber);
-            if (levelUpTileSource) { // 레벨업 타일이 있다면 다른 타일들을 제거하고 새 타일로 교체함
-                // 제거
-                for (var i = 0; i < matched.length; i++) {
+            var levelUpTileSource_1 = this.modelMgr.getModelByLevelNumber(newLevelNumber_1);
+            if (levelUpTileSource_1) { // 레벨업 타일이 있다면 다른 타일들을 제거하고 새 타일로 교체함
+                var _loop_1 = function (i) {
                     if (matched[i].tileW === tile.tileW && matched[i].tileH === tile.tileH) {
-                        // 대상타일은 레벨업 타일로 교체
-                        var newTile = levelUpTileSource.clone();
-                        newTile.position.copy(matched[i].object.position);
-                        this.scene.add(newTile);
-                        this.scene.remove(matched[i].object);
-                        matched[i].object = newTile;
-                        matched[i].level = newLevelNumber;
+                        // // 대상타일은 레벨업 타일로 교체
+                        // const newTile = levelUpTileSource;
+                        // newTile.position.copy(matched[i].object.position);
+                        // this.scene.add(newTile);
+                        // this.scene.remove(matched[i].object);
+                        // matched[i].object = newTile;
+                        // matched[i].level = newLevelNumber;
+                        // 대상타일은 제거후 생성
+                        levelUpTileSource_1.position.copy(matched[i].object.position);
+                        this_1.deleteTileObject(matched[i].object, tile, function () {
+                            // 대상타일 제거가 완료되면 레벨업 타일을 생성
+                            levelUpTileSource_1.position.y = -30;
+                            _this.scene.add(levelUpTileSource_1);
+                            // 생성 애니메이션 처리
+                            new TWEEN.default.Tween(levelUpTileSource_1.position)
+                                .to({
+                                y: 0
+                            }, 500)
+                                .easing(TWEEN.default.Easing.Quadratic.Out)
+                                .onComplete(function () {
+                                matched[i].object = levelUpTileSource_1;
+                                matched[i].level = newLevelNumber_1;
+                                // 매치된 타일처리후에 매치된것이 있을수 있으므로
+                                _this.checkTriple(matched[i]);
+                            })
+                                .start();
+                        });
                     }
                     else {
                         // 대상타일이 아닌것은 0레벨 타일로 교체
-                        var emptyTile = zeroTile.clone();
+                        var emptyTile = zeroTile;
                         emptyTile.position.copy(matched[i].object.position);
-                        this.scene.add(emptyTile);
-                        this.deleteTileObject(matched[i].object, tile);
+                        this_1.scene.add(emptyTile);
+                        this_1.deleteTileObject(matched[i].object, tile);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
                     }
+                };
+                var this_1 = this;
+                // 제거
+                for (var i = 0; i < matched.length; i++) {
+                    _loop_1(i);
                 }
             }
             else { // 최대레벨이 3매치가 성사되었다면
                 // 매치된 타일 전체를 제거하고, 빈타일로 만든다.
                 for (var i = 0; i < matched.length; i++) {
-                    var emptyTile = zeroTile.clone();
+                    var emptyTile = zeroTile;
                     emptyTile.position.copy(matched[i].object.position);
                     this.scene.add(emptyTile);
                     this.deleteTileObject(matched[i].object, tile);
@@ -54099,8 +54124,6 @@ var Board = /** @class */ (function () {
                 }
                 console.warn('최대레벨 타일 매치됨.');
             }
-            // 매치된 타일처리후에 매치된것이 있을수 있으므로
-            this.checkTriple(tile);
         }
     };
     /**
@@ -54108,22 +54131,18 @@ var Board = /** @class */ (function () {
      * @param target 제거 대상
      * @param tile 애니메이션 목표 대상 타일
      */
-    Board.prototype.deleteTileObject = function (target, tile) {
+    Board.prototype.deleteTileObject = function (target, tile, onComplete) {
         var _this = this;
         // 투명 처리를 할것이므로 재질을 복제처리한다.
         if (target.material instanceof Array) {
             for (var i = 0; i < target.material.length; i++) {
-                var clonedMaterial = target.material[i].clone();
+                var clonedMaterial = target.material[i];
                 clonedMaterial.transparent = true;
-                clonedMaterial.opacity = 1.0;
-                target.material[i] = clonedMaterial;
             }
         }
         else {
-            var clonedMaterial = target.material.clone();
+            var clonedMaterial = target.material;
             clonedMaterial.transparent = true;
-            clonedMaterial.opacity = 1.0;
-            target.material = clonedMaterial;
         }
         // 애니메이션 처리
         new TWEEN.default.Tween({
@@ -54151,12 +54170,13 @@ var Board = /** @class */ (function () {
                 for (var i = 0; i < target.material.length; i++) {
                     var material = target.material[i];
                     material.dispose();
-                    console.log(material.uuid);
                 }
             }
             else {
                 target.material.dispose();
-                console.log(target.material.uuid);
+            }
+            if (onComplete) {
+                onComplete();
             }
         })
             .start();
@@ -54384,8 +54404,8 @@ var GameLogic = /** @class */ (function () {
                     var targetTile_1 = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
                     targetTile_1.level = this.cursor.userData['level'];
-                    // 커서객체 메모리해제 및 복제
-                    var cloneObject = this.cursor.userData['sourceObject'].clone();
+                    // 커서객체 메모리해제
+                    var cloneObject = this.cursor.userData['sourceObject'];
                     cloneObject.position.copy(this.cursor.position);
                     this.scene.add(cloneObject);
                     this.disposeCursor();
@@ -54401,55 +54421,8 @@ var GameLogic = /** @class */ (function () {
                         .easing(TWEEN.default.Easing.Quadratic.Out)
                         .onComplete(function () {
                         // 3타일 매치 체크
-                        //this.board.checkTriple(targetTile);
-                        //this.createCursor();
-                        // 재질투명도 조절
-                        if (targetTile_1.object.material instanceof Array) {
-                            for (var i = 0; i < targetTile_1.object.material.length; i++) {
-                                targetTile_1.object.material[i] = targetTile_1.object.material[i].clone();
-                                targetTile_1.object.material[i].transparent = true;
-                            }
-                        }
-                        else {
-                            targetTile_1.object.material = targetTile_1.object.material.clone();
-                            targetTile_1.object.material.transparent = true;
-                        }
-                        // 투명애니메이션 테스트
-                        // 애니메이션 처리
-                        new TWEEN.default.Tween({
-                            opacity: 1.0
-                        }).to({
-                            opacity: 0.0
-                        }, 500)
-                            .easing(TWEEN.default.Easing.Quadratic.Out)
-                            .onUpdate(function (data) {
-                            // 재질투명도 조절
-                            if (targetTile_1.object.material instanceof Array) {
-                                for (var i = 0; i < targetTile_1.object.material.length; i++) {
-                                    var material = targetTile_1.object.material[i];
-                                    material.opacity = data.opacity;
-                                }
-                            }
-                            else {
-                                targetTile_1.object.material.opacity = data.opacity;
-                            }
-                        })
-                            .onComplete(function (data) {
-                            // 애니메이션이 완료되면 씬에서 제거하고 재질의 메모리를 해제
-                            _this.scene.remove(targetTile_1.object);
-                            if (targetTile_1.object.material instanceof Array) {
-                                for (var i = 0; i < targetTile_1.object.material.length; i++) {
-                                    var material = targetTile_1.object.material[i];
-                                    material.dispose();
-                                }
-                            }
-                            else {
-                                targetTile_1.object.material.dispose();
-                            }
-                            _this.createCursor();
-                        })
-                            .delay(500)
-                            .start();
+                        _this.board.checkTriple(targetTile_1);
+                        _this.createCursor();
                     })
                         .start();
                 }
@@ -54557,7 +54530,28 @@ var ModelManager = /** @class */ (function () {
     ModelManager.prototype.getModelByLevelNumber = function (levelNo) {
         var key = 'level' + levelNo;
         if (this.models.hasOwnProperty(key)) {
-            return this.models[key];
+            // 모델의 Geometry와 Material정보로 새 Mesh를 생성하여 반환한다.
+            if (this.models[key].material instanceof Array) {
+                var source = this.models[key].material;
+                var materials = [];
+                for (var i = 0; i < source.length; i++) {
+                    var material = new three_1.MeshPhongMaterial();
+                    material.copy(source[i]);
+                    materials.push(material);
+                }
+                var newMesh = new three_1.Mesh(this.models[key].geometry, materials);
+                newMesh.castShadow = true;
+                newMesh.receiveShadow = true;
+                return newMesh;
+            }
+            else {
+                var material = new three_1.MeshPhongMaterial();
+                material.copy(this.models[key].material);
+                var newMesh = new three_1.Mesh(this.models[key].geometry, material);
+                newMesh.castShadow = true;
+                newMesh.receiveShadow = true;
+                return newMesh;
+            }
         }
         else {
             return null;
