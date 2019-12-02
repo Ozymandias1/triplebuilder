@@ -54447,6 +54447,7 @@ var GameLogic = /** @class */ (function () {
                 if (this.cursor) {
                     this.cursor.userData['pickedTile'] = null;
                     this.cursor.position.copy(pickObject.position);
+                    this.scene.add(this.cursor);
                     this.setCursorColor(0xff0000);
                     //this.scene.remove(this.cursor);
                 }
@@ -54494,6 +54495,7 @@ var GameLogic = /** @class */ (function () {
                         // 3타일 매치 체크
                         _this.board.checkTriple(targetTile_1);
                         _this.createCursor();
+                        _this.onPointerMove(event);
                     })
                         .start();
                 }

@@ -72,6 +72,7 @@ export class GameLogic {
                 if( this.cursor ) {
                     this.cursor.userData['pickedTile'] = null;
                     this.cursor.position.copy(pickObject.position);
+                    this.scene.add(this.cursor);
                     this.setCursorColor(0xff0000);
                     //this.scene.remove(this.cursor);
                 }
@@ -125,6 +126,7 @@ export class GameLogic {
                         // 3타일 매치 체크
                         this.board.checkTriple(targetTile);
                         this.createCursor();
+                        this.onPointerMove(event);
                     })
                     .start();
                 }
