@@ -131,4 +131,11 @@ export class Core {
 
         this.renderer.render(this.scene, this.camera);
     }
+
+    /**
+     * 메모리 해제
+     */
+    public dispose() {
+        this.board.dispose();
+    }
 }

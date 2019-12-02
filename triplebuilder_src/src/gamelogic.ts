@@ -54,7 +54,7 @@ export class GameLogic {
         this.rayCast.setFromCamera( this.mousePos, this.camera );
 
         // 보드판에 픽킹 처리를 한다.
-        const intersects = this.rayCast.intersectObjects(this.board.plates);
+        const intersects = this.rayCast.intersectObjects(this.board.pickPlates);
         if( intersects && intersects.length > 0 ) {
 
             const pickObject = intersects[0].object;

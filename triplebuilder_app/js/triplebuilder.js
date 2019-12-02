@@ -53896,7 +53896,8 @@ var Board = /** @class */ (function () {
         this.camera = camera;
         this.camControl = camControl;
         this.tileSize = 10;
-        this.plates = [];
+        this.pickPlates = [];
+        this.floorPlates = [];
         this.mapWidth = -1;
         this.mapHeight = -1;
         this.prevPickPlate = null;
@@ -53908,11 +53909,54 @@ var Board = /** @class */ (function () {
         this.plateBase = new three_1.Mesh(geometry, material);
     }
     /**
+     * 리소스 메모리 해제
+     */
+    Board.prototype.dispose = function () {
+        // 픽킹용 바닥판 제거
+        for (var i = 0; i < this.pickPlates.length; i++) {
+            this.pickPlates[i] = null;
+        }
+        this.pickPlates = [];
+        // 생성되어 있는 타일 제거
+        for (var w = 0; w < this.mapWidth; w++) {
+            for (var h = 0; h < this.mapHeight; h++) {
+                var mapData = this.map[w][h];
+                if (mapData.object) {
+                    this.scene.remove(mapData.object);
+                    mapData.object.geometry.dispose();
+                    if (mapData.object.material instanceof Array) {
+                        for (var m = 0; m < mapData.object.material.length; m++) {
+                            mapData.object.material[m].dispose();
+                        }
+                    }
+                    else {
+                        mapData.object.material.dispose();
+                    }
+                }
+            }
+        }
+        // 바닥판 제거
+        for (var i = 0; i < this.floorPlates.length; i++) {
+            var plate = this.floorPlates[i];
+            this.scene.remove(plate);
+            plate.geometry.dispose();
+            if (plate.material instanceof Array) {
+                for (var m = 0; m < plate.material.length; m++) {
+                    plate.material[m].dispose();
+                }
+            }
+            else {
+                plate.material.dispose();
+            }
+        }
+    };
+    /**
      * 맵 생성
      * @param width 맵 가로 타일개수
      * @param height 맵 세로 타일개수
      */
     Board.prototype.createMap = function (width, height) {
+        console.warn('맵생성시 이전 리소스 제거 필요함');
         this.mapWidth = width;
         this.mapHeight = height;
         // 가로세로 개수만큼 초기화
@@ -53921,34 +53965,47 @@ var Board = /** @class */ (function () {
             this.map[w] = [];
             for (var h = 0; h < height; h++) {
                 this.map[w][h] = new Tile(w, h, 0);
+                // 바닥판생성, 0레벨 판으로 깔린다.
+                var model = this.modelMgr.getModelByLevelNumber(0);
+                model.position.x = w * this.tileSize;
+                model.position.z = h * this.tileSize;
+                this.scene.add(model);
+                this.floorPlates.push(model);
+                // 픽킹용 패널
+                var plate = this.plateBase.clone();
+                plate.name = w + '_' + h + '/plate';
+                plate.position.copy(model.position);
+                plate.updateMatrixWorld(true);
+                plate.userData['linkedTile'] = this.map[w][h];
+                this.pickPlates.push(plate);
             }
         }
-        // 레벨에 따른 메시 생성
+        // 타일 레벨에 따른 메시 생성
         for (var w = 0; w < width; w++) {
             for (var h = 0; h < height; h++) {
                 var mapData = this.map[w][h];
                 var model = this.modelMgr.getModelByLevelNumber(mapData.level);
                 if (model) {
-                    mapData.object = model;
-                    mapData.object.position.x = w * this.tileSize;
-                    mapData.object.position.z = h * this.tileSize;
-                    this.scene.add(mapData.object);
-                    // 픽킹용 패널
-                    var plate = this.plateBase.clone();
-                    plate.name = w + '_' + h + '/plate';
-                    plate.position.copy(mapData.object.position);
-                    plate.updateMatrixWorld(true);
-                    plate.userData['linkedTile'] = mapData;
-                    this.plates.push(plate);
-                    mapData.object = null;
+                    // mapData.object = model;
+                    // mapData.object.position.x = w * this.tileSize;
+                    // mapData.object.position.z = h * this.tileSize;
+                    // this.scene.add(mapData.object);
+                    // // 픽킹용 패널
+                    // const plate = this.plateBase.clone();
+                    // plate.name = w + '_' + h + '/plate';
+                    // plate.position.copy(mapData.object.position);
+                    // plate.updateMatrixWorld(true);
+                    // plate.userData['linkedTile'] = mapData;
+                    // this.pickPlates.push(plate);
+                    // mapData.object = null;
                 }
             }
         }
         // 바운딩을 계산하여 카메라를 이동시킨다.
         var bounding = new three_1.Box3();
         bounding.makeEmpty();
-        for (var i = 0; i < this.plates.length; i++) {
-            bounding.expandByObject(this.plates[i]);
+        for (var i = 0; i < this.pickPlates.length; i++) {
+            bounding.expandByObject(this.pickPlates[i]);
         }
         var sphere = new three_1.Sphere();
         bounding.getBoundingSphere(sphere);
@@ -54289,6 +54346,12 @@ var Core = /** @class */ (function () {
         this.control.update();
         this.renderer.render(this.scene, this.camera);
     };
+    /**
+     * 메모리 해제
+     */
+    Core.prototype.dispose = function () {
+        this.board.dispose();
+    };
     return Core;
 }());
 exports.Core = Core;
@@ -54357,7 +54420,7 @@ var GameLogic = /** @class */ (function () {
         this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
         this.rayCast.setFromCamera(this.mousePos, this.camera);
         // 보드판에 픽킹 처리를 한다.
-        var intersects = this.rayCast.intersectObjects(this.board.plates);
+        var intersects = this.rayCast.intersectObjects(this.board.pickPlates);
         if (intersects && intersects.length > 0) {
             var pickObject = intersects[0].object;
             var tile = pickObject.userData['linkedTile'];
@@ -54509,7 +54572,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var MTLLoader_1 = __webpack_require__(/*! three/examples/jsm/loaders/MTLLoader */ "./node_modules/three/examples/jsm/loaders/MTLLoader.js");
 var OBJLoader_1 = __webpack_require__(/*! three/examples/jsm/loaders/OBJLoader */ "./node_modules/three/examples/jsm/loaders/OBJLoader.js");
-var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 /**
  * 모델 관리 클래스
  */
@@ -54577,46 +54639,6 @@ var ModelManager = /** @class */ (function () {
         else {
             return null;
         }
-    };
-    ModelManager.prototype.test = function () {
-        var _this = this;
-        var target = this.getModelByLevelNumber(1).clone();
-        this.scene.add(target);
-        for (var i = 0; i < target.material.length; i++) {
-            if (i === 0) {
-                console.log('original', target.uuid, i, target.material[i].uuid);
-            }
-            var cloned = target.material[i].clone();
-            if (i === 0) {
-                console.log('cloned', target.uuid, i, cloned.uuid);
-            }
-            cloned.transparent = true;
-            target.material[i] = cloned;
-            if (i === 0) {
-                console.log('after', target.uuid, i, target.material[i].uuid);
-            }
-        }
-        new TWEEN.default.Tween({
-            opacity: 1.0
-        }).to({
-            opacity: 0.0
-        }, 500)
-            .easing(TWEEN.default.Easing.Quadratic.Out)
-            .onUpdate(function (data) {
-            // 재질투명도 조절
-            for (var i = 0; i < target.material.length; i++) {
-                var material = target.material[i];
-                material.opacity = data.opacity;
-                if (i === 0) {
-                    console.log('onUpdate', target.uuid, material.uuid);
-                }
-            }
-            var tt = _this.models['level1'];
-            console.log(tt.material[0].uuid, tt.material[0].transparent, tt.material[0].opacity);
-        })
-            .onComplete(function (data) {
-        })
-            .start();
     };
     return ModelManager;
 }());

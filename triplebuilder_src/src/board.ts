@@ -5,7 +5,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { _Math } from "three/src/math/Math";
 
 export class Tile {
-    public object: Object3D;
+    public object: Mesh;
     public tileW: number;
     public tileH: number;
     public level: number;
@@ -34,7 +34,8 @@ export class Board {
     private matSelect: MeshPhongMaterial;
     private matNormal: MeshPhongMaterial;
     
-    public plates: Mesh[];
+    public pickPlates: Mesh[];
+    public floorPlates: Mesh[];
     public mapWidth: number;
     public mapHeight: number;
 
@@ -48,7 +49,8 @@ export class Board {
         this.camera = camera;
         this.camControl = camControl;
         this.tileSize = 10;
-        this.plates = [];
+        this.pickPlates = [];
+        this.floorPlates = [];
         this.mapWidth = -1;
         this.mapHeight = -1;
         this.prevPickPlate = null;
@@ -63,11 +65,58 @@ export class Board {
     }
 
     /**
+     * 리소스 메모리 해제
+     */
+    dispose() {
+        // 픽킹용 바닥판 제거
+        for(let i = 0; i < this.pickPlates.length; i++) {
+            this.pickPlates[i] = null;
+        }
+        this.pickPlates = [];
+
+        // 생성되어 있는 타일 제거
+        for(let w = 0; w < this.mapWidth; w++) {
+            for(let h = 0; h < this.mapHeight; h++) {
+                const mapData = this.map[w][h];
+                if( mapData.object ) {
+                    this.scene.remove(mapData.object);
+                    
+                    mapData.object.geometry.dispose();
+                    if (mapData.object.material instanceof Array) {
+                        for (let m = 0; m < mapData.object.material.length; m++) {
+                            mapData.object.material[m].dispose();
+                        }
+                    } else {
+                        mapData.object.material.dispose();
+                    }
+                }
+            }
+        }
+
+        // 바닥판 제거
+        for(let i = 0; i < this.floorPlates.length; i++) {
+            const plate = this.floorPlates[i];
+            this.scene.remove(plate);
+            
+            plate.geometry.dispose();
+            if( plate.material instanceof Array ) {
+                for(let m = 0; m < plate.material.length; m++) {
+                    plate.material[m].dispose();
+                }
+            } else {
+                plate.material.dispose();
+            }
+
+        }
+    }
+
+    /**
      * 맵 생성
      * @param width 맵 가로 타일개수
      * @param height 맵 세로 타일개수
      */
     createMap(width: number, height: number) {
+        console.warn('맵생성시 이전 리소스 제거 필요함');
 
         this.mapWidth = width;
         this.mapHeight = height;
@@ -78,28 +127,43 @@ export class Board {
             this.map[w] = [];
             for(let h = 0; h < height; h++) {
                 this.map[w][h] = new Tile(w, h, 0);
+
+                // 바닥판생성, 0레벨 판으로 깔린다.
+                const model = this.modelMgr.getModelByLevelNumber(0);
+                model.position.x = w * this.tileSize;
+                model.position.z = h * this.tileSize;
+                this.scene.add(model);
+                this.floorPlates.push(model);
+                
+                // 픽킹용 패널
+                const plate = this.plateBase.clone();
+                plate.name = w + '_' + h + '/plate';
+                plate.position.copy(model.position);
+                plate.updateMatrixWorld(true);
+                plate.userData['linkedTile'] = this.map[w][h];
+                this.pickPlates.push(plate);
             }
         }
 
-        // 레벨에 따른 메시 생성
+        // 타일 레벨에 따른 메시 생성
         for(let w = 0; w < width; w++) {
             for(let h = 0; h < height; h++) {
                 const mapData = this.map[w][h];
                 const model = this.modelMgr.getModelByLevelNumber(mapData.level);
                 if( model ) {
-                    mapData.object = model;
-                    mapData.object.position.x = w * this.tileSize;
-                    mapData.object.position.z = h * this.tileSize;
-                    this.scene.add(mapData.object);
+                    // mapData.object = model;
+                    // mapData.object.position.x = w * this.tileSize;
+                    // mapData.object.position.z = h * this.tileSize;
+                    // this.scene.add(mapData.object);
 
-                    // 픽킹용 패널
-                    const plate = this.plateBase.clone();
-                    plate.name = w + '_' + h + '/plate';
-                    plate.position.copy(mapData.object.position);
-                    plate.updateMatrixWorld(true);
-                    plate.userData['linkedTile'] = mapData;
-                    this.plates.push(plate);
-                    mapData.object = null;
+                    // // 픽킹용 패널
+                    // const plate = this.plateBase.clone();
+                    // plate.name = w + '_' + h + '/plate';
+                    // plate.position.copy(mapData.object.position);
+                    // plate.updateMatrixWorld(true);
+                    // plate.userData['linkedTile'] = mapData;
+                    // this.pickPlates.push(plate);
+                    // mapData.object = null;
                 }
             }
         }
@@ -107,8 +171,8 @@ export class Board {
         // 바운딩을 계산하여 카메라를 이동시킨다.
         const bounding = new Box3();
         bounding.makeEmpty();
-        for(let i = 0; i < this.plates.length; i++) {
-            bounding.expandByObject(this.plates[i]);
+        for(let i = 0; i < this.pickPlates.length; i++) {
+            bounding.expandByObject(this.pickPlates[i]);
         }
 
         const sphere = new Sphere();
