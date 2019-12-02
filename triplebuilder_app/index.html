@@ -19,8 +19,7 @@
     <button onclick="document.body.requestFullscreen();" style="position:absolute; right: 10px; top: 10px;">최대화면</button>
     <script>
         var app = new TripleBuilder.Core(function(){
-            app.board.createMap(10, 10);
-            app.gameLogic.createCursor();
+            app.createGame(10, 10);
         });
     </script>
 </body>

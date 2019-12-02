@@ -137,5 +137,20 @@ export class Core {
      */
     public dispose() {
         this.board.dispose();
+        this.gameLogic.disposeCursor();
+    }
+
+    /**
+     * 게임 생성
+     * @param mapWidth 맵 가로 너비
+     * @param mapHeight 맵 세로 너비
+     */
+    public createGame(mapWidth: number, mapHeight: number) {
+
+        this.dispose();
+
+        this.board.createMap(mapWidth, mapHeight);
+        this.gameLogic.createCursor();
+
     }
 }

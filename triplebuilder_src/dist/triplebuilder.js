@@ -54351,6 +54351,17 @@ var Core = /** @class */ (function () {
      */
     Core.prototype.dispose = function () {
         this.board.dispose();
+        this.gameLogic.disposeCursor();
+    };
+    /**
+     * 게임 생성
+     * @param mapWidth 맵 가로 너비
+     * @param mapHeight 맵 세로 너비
+     */
+    Core.prototype.createGame = function (mapWidth, mapHeight) {
+        this.dispose();
+        this.board.createMap(mapWidth, mapHeight);
+        this.gameLogic.createCursor();
     };
     return Core;
 }());
