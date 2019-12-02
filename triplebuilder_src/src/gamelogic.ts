@@ -133,7 +133,7 @@ export class GameLogic {
      */
     createCursor() {
 
-        const level = 1;//const level = THREEMATH.randInt(1,4);
+        const level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
         const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
@@ -149,7 +149,7 @@ export class GameLogic {
                     const edgeMaterial = new LineBasicMaterial({color: 0x000000});
                     const edge = new LineSegments(edgeGeometry, edgeMaterial);
                     this.cursor.add(edge);
-                }
+                }   
             });
 
             this.scene.add(this.cursor);
@@ -157,6 +157,39 @@ export class GameLogic {
             this.cursor.userData['level'] = level;
 
         }
+    }
+
+    /**
+     * 확률을 적용하여 랜덤 타일 번호를 계산한다.
+     * https://docs.unity3d.com/kr/530/Manual/RandomNumbers.html
+     */
+    getRandomTileNumber(ratios: number[]): number {
+
+        let total = 0;
+
+        for(let i = 0; i < ratios.length; i++) {
+            total += ratios[i];
+        }
+
+        let randomPoint = this.getRandomRange(0.0, 1.0) * total;
+        for(let i = 0; i < ratios.length; i++) {
+            if( randomPoint < ratios[i] ) {
+                return i;
+            } else {
+                randomPoint -= ratios[i];
+            }
+        }
+
+        return ratios.length-1;
+    }
+
+    /**
+     * 최소, 최대를 포함하여 최소~최대사이의 난수 반환
+     * @param min 최소
+     * @param max 최대
+     */
+    getRandomRange(min: number, max: number): number {
+        return Math.random() * (max - min) + min;
     }
     
     /**

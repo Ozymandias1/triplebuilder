@@ -245,15 +245,6 @@ export class Board {
                 for(let i = 0; i < matched.length; i++) {
                     if( matched[i].tileW === tile.tileW && matched[i].tileH === tile.tileH ) { 
 
-                        // // 대상타일은 레벨업 타일로 교체
-                        // const newTile = levelUpTileSource;
-                        // newTile.position.copy(matched[i].object.position);
-                        // this.scene.add(newTile);
-
-                        // this.scene.remove(matched[i].object);
-                        // matched[i].object = newTile;
-                        // matched[i].level = newLevelNumber;
-
                         // 대상타일은 제거후 생성
                         levelUpTileSource.position.copy(matched[i].object.position);
                         this.deleteTileObject(<Mesh>matched[i].object, tile, () =>{
@@ -264,7 +255,7 @@ export class Board {
                             new TWEEN.default.Tween(levelUpTileSource.position)
                             .to({
                                 y:0
-                            }, 500)
+                            }, 250)
                             .easing(TWEEN.default.Easing.Quadratic.Out)
                             .onComplete(()=>{
                                 matched[i].object = levelUpTileSource;
@@ -333,7 +324,7 @@ export class Board {
             opacity: 1.0
         }).to({
             opacity: 0.0
-        }, 500)
+        }, 250)
         .easing(TWEEN.default.Easing.Quadratic.Out)
         .onUpdate((data)=>{
 

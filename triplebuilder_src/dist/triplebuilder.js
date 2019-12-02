@@ -54068,13 +54068,6 @@ var Board = /** @class */ (function () {
             if (levelUpTileSource_1) { // 레벨업 타일이 있다면 다른 타일들을 제거하고 새 타일로 교체함
                 var _loop_1 = function (i) {
                     if (matched[i].tileW === tile.tileW && matched[i].tileH === tile.tileH) {
-                        // // 대상타일은 레벨업 타일로 교체
-                        // const newTile = levelUpTileSource;
-                        // newTile.position.copy(matched[i].object.position);
-                        // this.scene.add(newTile);
-                        // this.scene.remove(matched[i].object);
-                        // matched[i].object = newTile;
-                        // matched[i].level = newLevelNumber;
                         // 대상타일은 제거후 생성
                         levelUpTileSource_1.position.copy(matched[i].object.position);
                         this_1.deleteTileObject(matched[i].object, tile, function () {
@@ -54085,7 +54078,7 @@ var Board = /** @class */ (function () {
                             new TWEEN.default.Tween(levelUpTileSource_1.position)
                                 .to({
                                 y: 0
-                            }, 500)
+                            }, 250)
                                 .easing(TWEEN.default.Easing.Quadratic.Out)
                                 .onComplete(function () {
                                 matched[i].object = levelUpTileSource_1;
@@ -54149,7 +54142,7 @@ var Board = /** @class */ (function () {
             opacity: 1.0
         }).to({
             opacity: 0.0
-        }, 500)
+        }, 250)
             .easing(TWEEN.default.Easing.Quadratic.Out)
             .onUpdate(function (data) {
             // 재질투명도 조절
@@ -54434,7 +54427,7 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.createCursor = function () {
         var _this = this;
-        var level = 1; //const level = THREEMATH.randInt(1,4);
+        var level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
         var sourceObject = this.modelMgr.getModelByLevelNumber(level);
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
         if (sourceObject) {
@@ -54453,6 +54446,34 @@ var GameLogic = /** @class */ (function () {
             this.cursor.userData['sourceObject'] = sourceObject;
             this.cursor.userData['level'] = level;
         }
+    };
+    /**
+     * 확률을 적용하여 랜덤 타일 번호를 계산한다.
+     * https://docs.unity3d.com/kr/530/Manual/RandomNumbers.html
+     */
+    GameLogic.prototype.getRandomTileNumber = function (ratios) {
+        var total = 0;
+        for (var i = 0; i < ratios.length; i++) {
+            total += ratios[i];
+        }
+        var randomPoint = this.getRandomRange(0.0, 1.0) * total;
+        for (var i = 0; i < ratios.length; i++) {
+            if (randomPoint < ratios[i]) {
+                return i;
+            }
+            else {
+                randomPoint -= ratios[i];
+            }
+        }
+        return ratios.length - 1;
+    };
+    /**
+     * 최소, 최대를 포함하여 최소~최대사이의 난수 반환
+     * @param min 최소
+     * @param max 최대
+     */
+    GameLogic.prototype.getRandomRange = function (min, max) {
+        return Math.random() * (max - min) + min;
     };
     /**
      * 커서 객체 메모리 해제
