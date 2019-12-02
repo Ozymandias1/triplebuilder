@@ -53956,7 +53956,7 @@ var Board = /** @class */ (function () {
      * @param height 맵 세로 타일개수
      */
     Board.prototype.createMap = function (width, height) {
-        console.warn('맵생성시 이전 리소스 제거 필요함');
+        this.dispose();
         this.mapWidth = width;
         this.mapHeight = height;
         // 가로세로 개수만큼 초기화
@@ -54429,12 +54429,15 @@ var GameLogic = /** @class */ (function () {
                     this.cursor.position.copy(pickObject.position);
                     this.cursor.userData['pickedTile'] = tile;
                     this.scene.add(this.cursor);
+                    this.setCursorColor(0x000000);
                 }
             }
             else {
                 if (this.cursor) {
                     this.cursor.userData['pickedTile'] = null;
-                    this.scene.remove(this.cursor);
+                    this.cursor.position.copy(pickObject.position);
+                    this.setCursorColor(0xff0000);
+                    //this.scene.remove(this.cursor);
                 }
             }
         }
@@ -54442,6 +54445,7 @@ var GameLogic = /** @class */ (function () {
             if (this.cursor) {
                 this.cursor.userData['pickedTile'] = null;
                 this.scene.remove(this.cursor);
+                this.setCursorColor(0x000000);
             }
         }
     };
@@ -54508,6 +54512,19 @@ var GameLogic = /** @class */ (function () {
             this.scene.add(this.cursor);
             this.cursor.userData['sourceObject'] = sourceObject;
             this.cursor.userData['level'] = level;
+        }
+    };
+    /**
+     * 커서의 색상을 설정한다.
+     * @param color 색상
+     */
+    GameLogic.prototype.setCursorColor = function (color) {
+        if (this.cursor) {
+            this.cursor.traverse(function (child) {
+                if (child instanceof three_1.LineSegments) {
+                    child.material.color = new three_1.Color(color);
+                }
+            });
         }
     };
     /**

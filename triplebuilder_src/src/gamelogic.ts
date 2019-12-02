@@ -1,4 +1,4 @@
-import { Raycaster, Mesh, LineSegments, Math as THREEMATH, EdgesGeometry, Object3D, LineBasicMaterial, Scene, Vector2, Camera } from "three";
+import { Raycaster, Mesh, LineSegments, Math as THREEMATH, EdgesGeometry, Object3D, LineBasicMaterial, Scene, Vector2, Camera, Color } from "three";
 import { Board, Tile } from "./board";
 import { ModelManager } from "./model";
 import * as TWEEN from '@tweenjs/tween.js';
@@ -65,18 +65,22 @@ export class GameLogic {
                     this.cursor.position.copy(pickObject.position);
                     this.cursor.userData['pickedTile'] = tile;
                     this.scene.add(this.cursor);
+                    this.setCursorColor(0x000000);
                 }
 
             } else {
                 if( this.cursor ) {
                     this.cursor.userData['pickedTile'] = null;
-                    this.scene.remove(this.cursor);
+                    this.cursor.position.copy(pickObject.position);
+                    this.setCursorColor(0xff0000);
+                    //this.scene.remove(this.cursor);
                 }
             }
         } else {
             if( this.cursor ) {
                 this.cursor.userData['pickedTile'] = null;
                 this.scene.remove(this.cursor);
+                this.setCursorColor(0x000000);
             }
         }
 
@@ -157,6 +161,24 @@ export class GameLogic {
             this.cursor.userData['level'] = level;
 
         }
+    }
+
+    /**
+     * 커서의 색상을 설정한다.
+     * @param color 색상
+     */
+    setCursorColor(color: number) {
+
+        if( this.cursor ) {
+
+            this.cursor.traverse( (child) => {
+                if( child instanceof LineSegments ) {
+                    (child.material as LineBasicMaterial).color = new Color(color);
+                }
+            });
+
+        }
+
     }
 
     /**

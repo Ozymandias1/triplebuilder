@@ -116,7 +116,7 @@ export class Board {
      * @param height 맵 세로 타일개수
      */
     createMap(width: number, height: number) {
-        console.warn('맵생성시 이전 리소스 제거 필요함');
+        this.dispose();
 
         this.mapWidth = width;
         this.mapHeight = height;
