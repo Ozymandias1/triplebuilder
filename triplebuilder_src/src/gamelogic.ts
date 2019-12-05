@@ -134,9 +134,12 @@ export class GameLogic {
     /**
      * 커서 객체 생성
      */
-    createCursor() {
+    createCursor(level?: number) {
 
-        const level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+        //const level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+        if( !level ) {
+            level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+        }
         const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
