@@ -54440,7 +54440,6 @@ var GameLogic = /** @class */ (function () {
                     this.cursor.position.copy(pickObject.position);
                     this.cursor.userData['pickedTile'] = tile;
                     this.scene.add(this.cursor);
-                    this.setCursorColor(0x000000);
                 }
             }
             else {
@@ -54448,8 +54447,7 @@ var GameLogic = /** @class */ (function () {
                     this.cursor.userData['pickedTile'] = null;
                     this.cursor.position.copy(pickObject.position);
                     this.scene.add(this.cursor);
-                    this.setCursorColor(0xff0000);
-                    //this.scene.remove(this.cursor);
+                    this.scene.remove(this.cursor);
                 }
             }
         }
@@ -54457,7 +54455,6 @@ var GameLogic = /** @class */ (function () {
             if (this.cursor) {
                 this.cursor.userData['pickedTile'] = null;
                 this.scene.remove(this.cursor);
-                this.setCursorColor(0x000000);
             }
         }
     };
@@ -54516,28 +54513,32 @@ var GameLogic = /** @class */ (function () {
             this.cursor.name = 'Cursor';
             sourceObject.traverse(function (child) {
                 if (child instanceof three_1.Mesh) {
-                    var edgeGeometry = new three_1.EdgesGeometry(child.geometry);
-                    var edgeMaterial = new three_1.LineBasicMaterial({ color: 0x000000 });
-                    var edge = new three_1.LineSegments(edgeGeometry, edgeMaterial);
-                    _this.cursor.add(edge);
+                    // const edgeGeometry = new EdgesGeometry(child.geometry);
+                    // const edgeMaterial = new LineBasicMaterial({color: 0x000000});
+                    // const edge = new LineSegments(edgeGeometry, edgeMaterial);
+                    // this.cursor.add(edge);
+                    var cursorMaterial = null;
+                    if (child.material instanceof Array) {
+                        cursorMaterial = [];
+                        for (var m = 0; m < child.material.length; m++) {
+                            var matCursor = child.material[m].clone();
+                            matCursor.transparent = true;
+                            matCursor.opacity = 0.5;
+                            cursorMaterial.push(matCursor);
+                        }
+                    }
+                    else {
+                        cursorMaterial = child.material.clone();
+                        cursorMaterial.transparent = true;
+                        cursorMaterial.opacity = 0.5;
+                    }
+                    var mesh = new three_1.Mesh(child.geometry, cursorMaterial);
+                    _this.cursor.add(mesh);
                 }
             });
             this.scene.add(this.cursor);
             this.cursor.userData['sourceObject'] = sourceObject;
             this.cursor.userData['level'] = level;
-        }
-    };
-    /**
-     * 커서의 색상을 설정한다.
-     * @param color 색상
-     */
-    GameLogic.prototype.setCursorColor = function (color) {
-        if (this.cursor) {
-            this.cursor.traverse(function (child) {
-                if (child instanceof three_1.LineSegments) {
-                    child.material.color = new three_1.Color(color);
-                }
-            });
         }
     };
     /**
@@ -54573,13 +54574,27 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.disposeCursor = function () {
         if (this.cursor) {
+            // this.scene.remove(this.cursor);
+            // for(let i = 0; i < this.cursor.children.length; i++) {
+            //     const child = <LineSegments>this.cursor.children[i];
+            //     child.geometry.dispose();
+            //     (<any>child.material).dispose();
+            // }
+            // this.cursor = null;
             this.scene.remove(this.cursor);
-            for (var i = 0; i < this.cursor.children.length; i++) {
-                var child = this.cursor.children[i];
-                child.geometry.dispose();
-                child.material.dispose();
-            }
-            this.cursor = null;
+            this.cursor.traverse(function (child) {
+                if (child instanceof three_1.Mesh) {
+                    child.geometry.dispose();
+                    if (child.material instanceof Array) {
+                        for (var m = 0; m < child.material.length; m++) {
+                            child.material[m].dispose();
+                        }
+                    }
+                    else {
+                        child.material.dispose();
+                    }
+                }
+            });
         }
     };
     return GameLogic;

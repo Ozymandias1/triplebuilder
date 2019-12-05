@@ -65,7 +65,6 @@ export class GameLogic {
                     this.cursor.position.copy(pickObject.position);
                     this.cursor.userData['pickedTile'] = tile;
                     this.scene.add(this.cursor);
-                    this.setCursorColor(0x000000);
                 }
 
             } else {
@@ -73,15 +72,13 @@ export class GameLogic {
                     this.cursor.userData['pickedTile'] = null;
                     this.cursor.position.copy(pickObject.position);
                     this.scene.add(this.cursor);
-                    this.setCursorColor(0xff0000);
-                    //this.scene.remove(this.cursor);
+                    this.scene.remove(this.cursor);
                 }
             }
         } else {
             if( this.cursor ) {
                 this.cursor.userData['pickedTile'] = null;
                 this.scene.remove(this.cursor);
-                this.setCursorColor(0x000000);
             }
         }
 
@@ -151,10 +148,28 @@ export class GameLogic {
 
             sourceObject.traverse((child) => {
                 if( child instanceof Mesh ) {
-                    const edgeGeometry = new EdgesGeometry(child.geometry);
-                    const edgeMaterial = new LineBasicMaterial({color: 0x000000});
-                    const edge = new LineSegments(edgeGeometry, edgeMaterial);
-                    this.cursor.add(edge);
+                    // const edgeGeometry = new EdgesGeometry(child.geometry);
+                    // const edgeMaterial = new LineBasicMaterial({color: 0x000000});
+                    // const edge = new LineSegments(edgeGeometry, edgeMaterial);
+                    // this.cursor.add(edge);
+
+                    let cursorMaterial = null;
+                    if( child.material instanceof Array ) {
+                        cursorMaterial = [];
+                        for(let m = 0; m < child.material.length; m++) {
+                            const matCursor = child.material[m].clone();
+                            matCursor.transparent = true;
+                            matCursor.opacity = 0.5;
+                            cursorMaterial.push(matCursor);
+                        }
+                    } else {
+                        cursorMaterial = child.material.clone();
+                        cursorMaterial.transparent = true;
+                        cursorMaterial.opacity = 0.5;
+                    }
+
+                    const mesh = new Mesh(child.geometry, cursorMaterial);
+                    this.cursor.add(mesh);
                 }   
             });
 
@@ -163,24 +178,6 @@ export class GameLogic {
             this.cursor.userData['level'] = level;
 
         }
-    }
-
-    /**
-     * 커서의 색상을 설정한다.
-     * @param color 색상
-     */
-    setCursorColor(color: number) {
-
-        if( this.cursor ) {
-
-            this.cursor.traverse( (child) => {
-                if( child instanceof LineSegments ) {
-                    (child.material as LineBasicMaterial).color = new Color(color);
-                }
-            });
-
-        }
-
     }
 
     /**
@@ -221,13 +218,26 @@ export class GameLogic {
      */
     disposeCursor() {
         if( this.cursor ) {
+            // this.scene.remove(this.cursor);
+            // for(let i = 0; i < this.cursor.children.length; i++) {
+            //     const child = <LineSegments>this.cursor.children[i];
+            //     child.geometry.dispose();
+            //     (<any>child.material).dispose();
+            // }
+            // this.cursor = null;
             this.scene.remove(this.cursor);
-            for(let i = 0; i < this.cursor.children.length; i++) {
-                const child = <LineSegments>this.cursor.children[i];
-                child.geometry.dispose();
-                (<any>child.material).dispose();
-            }
-            this.cursor = null;
+            this.cursor.traverse((child)=>{
+                if( child instanceof Mesh ) {
+                    child.geometry.dispose();
+                    if( child.material instanceof Array ) {
+                        for(let m = 0; m < child.material.length; m++){
+                            child.material[m].dispose();
+                        }
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            });
         }
     }
 }
