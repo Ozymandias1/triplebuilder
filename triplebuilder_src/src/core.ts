@@ -4,6 +4,7 @@ import { Board } from './board';
 import { ModelManager } from './model';
 import { GameLogic } from './gamelogic';
 import * as TWEEN from '@tweenjs/tween.js';
+import * as FONTDATA from './Open_Sans_Bold_Italic.json';
 
 /**
  * 엔진 코어
@@ -29,7 +30,7 @@ export class Core {
      * 생성자
      */
     constructor(onReady?: Function) {
-
+console.log(FONTDATA);
         this.clock = new Clock();
 
         // 렌더러 생성
