@@ -33,6 +33,7 @@ export class Board {
     private prevPickPlate: Object3D;
     private matSelect: MeshPhongMaterial;
     private matNormal: MeshPhongMaterial;
+    private curtain: Mesh;
     
     public pickPlates: Mesh[];
     public floorPlates: Mesh[];
@@ -107,6 +108,14 @@ export class Board {
                 plate.material.dispose();
             }
 
+        }
+
+        // 커튼 제거
+        if( this.curtain ) {
+            this.scene.remove(this.curtain);
+            this.curtain.geometry.dispose();
+            (<MeshPhongMaterial>this.curtain.material).dispose();
+            this.curtain = null;
         }
     }
 
@@ -188,6 +197,19 @@ export class Board {
         this.camControl.update();
         this.camControl.minDistance = sphere.radius;
         this.camControl.maxDistance = sphere.radius * 2;
+
+        // 바닥판옆면을 가리기 위한 커튼 설치
+        const curtainHeight = 50;
+        const boundingSize = new Vector3(), boundingCenter = new Vector3();
+        bounding.getSize(boundingSize);
+        bounding.getCenter(boundingCenter);
+        const curtainGeometry = new BoxBufferGeometry(boundingSize.x, curtainHeight, boundingSize.z);
+        const curtainMaterial = new MeshPhongMaterial({ color: 0xcccccc });
+        this.curtain = new Mesh(curtainGeometry, curtainMaterial);
+        this.curtain.position.x = boundingCenter.x;
+        this.curtain.position.y = -(boundingSize.y * 0.25) - (curtainHeight * 0.5);
+        this.curtain.position.z = boundingCenter.z;
+        this.scene.add(this.curtain);
     }
 
     /**

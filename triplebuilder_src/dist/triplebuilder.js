@@ -53949,6 +53949,13 @@ var Board = /** @class */ (function () {
                 plate.material.dispose();
             }
         }
+        // 커튼 제거
+        if (this.curtain) {
+            this.scene.remove(this.curtain);
+            this.curtain.geometry.dispose();
+            this.curtain.material.dispose();
+            this.curtain = null;
+        }
     };
     /**
      * 맵 생성
@@ -54015,6 +54022,18 @@ var Board = /** @class */ (function () {
         this.camControl.update();
         this.camControl.minDistance = sphere.radius;
         this.camControl.maxDistance = sphere.radius * 2;
+        // 바닥판옆면을 가리기 위한 커튼 설치
+        var curtainHeight = 50;
+        var boundingSize = new three_1.Vector3(), boundingCenter = new three_1.Vector3();
+        bounding.getSize(boundingSize);
+        bounding.getCenter(boundingCenter);
+        var curtainGeometry = new three_1.BoxBufferGeometry(boundingSize.x, curtainHeight, boundingSize.z);
+        var curtainMaterial = new three_1.MeshPhongMaterial({ color: 0xcccccc });
+        this.curtain = new three_1.Mesh(curtainGeometry, curtainMaterial);
+        this.curtain.position.x = boundingCenter.x;
+        this.curtain.position.y = -(boundingSize.y * 0.25) - (curtainHeight * 0.5);
+        this.curtain.position.z = boundingCenter.z;
+        this.scene.add(this.curtain);
     };
     /**
      * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
