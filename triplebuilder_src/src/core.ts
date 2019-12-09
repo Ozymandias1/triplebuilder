@@ -1,10 +1,11 @@
-import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneBufferGeometry, Scene, WebGLRenderer, Raycaster, Vector2 } from 'three';
+import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneBufferGeometry, Scene, WebGLRenderer, Raycaster, Vector2, FontLoader, TextBufferGeometry } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Board } from './board';
 import { ModelManager } from './model';
 import { GameLogic } from './gamelogic';
+import { ScoreManager } from './score';
 import * as TWEEN from '@tweenjs/tween.js';
-import * as FONTDATA from './Open_Sans_Bold_Italic.json';
+import * as Font_Bold_Italic from './Open_Sans_Bold_Italic.json';
 
 /**
  * 엔진 코어
@@ -21,6 +22,7 @@ export class Core {
     private dirLight: DirectionalLight;
 
     // 로직
+    private scoreMgr: ScoreManager;
     private model: ModelManager;
     private board: Board;
     private gameLogic: GameLogic;
@@ -30,7 +32,7 @@ export class Core {
      * 생성자
      */
     constructor(onReady?: Function) {
-console.log(FONTDATA);
+        
         this.clock = new Clock();
 
         // 렌더러 생성
@@ -87,24 +89,27 @@ console.log(FONTDATA);
         this.control.screenSpacePanning = false;
         this.control.rotateSpeed = 0.5;
         this.control.enablePan = false;
-        this.control.maxPolarAngle = Math.PI / 2;
+        this.control.minPolarAngle = Math.PI * 0.1;
+        this.control.maxPolarAngle = Math.PI * 0.5;
 
         // 창크기변경 이벤트 등록
         window.addEventListener('resize', this.onResize.bind(this), false);
 
-        // 렌더링 루프 시작
-        this.render();
-
         const scope = this;
         // 모델 인스턴스
         this.model = new ModelManager(this.scene, function(){
+            // 스코어 객체
+            scope.scoreMgr = new ScoreManager(scope.scene, scope.camera, scope.control);
             // 게임판 인스턴스
-            scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control);
+            scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr);
             // 게임로직
-            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.board, scope.model);
+            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr);
             if( onReady ) {
                 onReady();
             }
+            
+            // 렌더링 루프 시작
+            scope.render();
         });
     }
 
@@ -128,6 +133,7 @@ console.log(FONTDATA);
 
         const deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.scoreMgr.update(deltaTime);
         this.control.update();
 
         this.renderer.render(this.scene, this.camera);
@@ -153,5 +159,19 @@ console.log(FONTDATA);
         this.board.createMap(mapWidth, mapHeight);
         this.gameLogic.createCursor();
 
+    }
+
+    public Test() {
+
+        const loader = new FontLoader();
+        const font = loader.parse(Font_Bold_Italic);
+        const geometry = new TextBufferGeometry('Score: 1234567890', {
+            font: font,
+            size: 10,
+            height: 5
+        });
+        const material = new MeshPhongMaterial({ color: 0xff0000 });
+        const text = new Mesh(geometry, material);
+        this.scene.add(text);
     }
 }

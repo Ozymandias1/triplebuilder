@@ -2,6 +2,7 @@ import { Raycaster, Mesh, LineSegments, Math as THREEMATH, EdgesGeometry, Object
 import { Board, Tile } from "./board";
 import { ModelManager } from "./model";
 import * as TWEEN from '@tweenjs/tween.js';
+import { ScoreManager } from "./score";
 
 export class GameLogic {
 
@@ -9,6 +10,7 @@ export class GameLogic {
     private camera: Camera;
     private board: Board;
     private modelMgr: ModelManager;
+    private scoreMgr: ScoreManager;
     private cursor: Object3D;
 
     // 픽킹
@@ -16,12 +18,13 @@ export class GameLogic {
     private mousePos: Vector2;
     private mouseDownPos: Vector2;
 
-    constructor(scene: Scene, camera: Camera, board: Board, modelMgr: ModelManager) {
+    constructor(scene: Scene, camera: Camera, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager) {
 
         this.scene = scene;
         this.camera = camera;
         this.board = board;
         this.modelMgr = modelMgr;
+        this.scoreMgr = scoreMgr;
 
         // 픽킹요소 초기화
         this.rayCast = new Raycaster();

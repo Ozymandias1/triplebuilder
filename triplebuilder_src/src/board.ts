@@ -2,7 +2,7 @@ import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D,
 import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { _Math } from "three/src/math/Math";
+import { ScoreManager } from "./score";
 
 export class Tile {
     public object: Mesh;
@@ -34,6 +34,7 @@ export class Board {
     private matSelect: MeshPhongMaterial;
     private matNormal: MeshPhongMaterial;
     private curtain: Mesh;
+    private scoreMgr: ScoreManager;
     
     public pickPlates: Mesh[];
     public floorPlates: Mesh[];
@@ -43,12 +44,13 @@ export class Board {
     /**
      * 생성자
      */
-    constructor(scene: Scene, modelMgr: ModelManager, camera: Camera, camControl: OrbitControls) {
+    constructor(scene: Scene, modelMgr: ModelManager, camera: Camera, camControl: OrbitControls, scoreMgr: ScoreManager) {
 
         this.scene = scene;
         this.modelMgr = modelMgr;
         this.camera = camera;
         this.camControl = camControl;
+        this.scoreMgr = scoreMgr;
         this.tileSize = 10;
         this.pickPlates = [];
         this.floorPlates = [];
@@ -186,6 +188,7 @@ export class Board {
 
         const sphere = new Sphere();
         bounding.getBoundingSphere(sphere);
+        this.scoreMgr.sphere = sphere.clone();
 
         this.camControl.target = sphere.center;
         this.camControl.object.position.set(
@@ -204,7 +207,9 @@ export class Board {
         bounding.getSize(boundingSize);
         bounding.getCenter(boundingCenter);
         const curtainGeometry = new BoxBufferGeometry(boundingSize.x, curtainHeight, boundingSize.z);
-        const curtainMaterial = new MeshPhongMaterial({ color: 0xcccccc });
+        const curtainMaterial = new MeshBasicMaterial({ 
+            color: 0xcccccc 
+        });
         this.curtain = new Mesh(curtainGeometry, curtainMaterial);
         this.curtain.position.x = boundingCenter.x;
         this.curtain.position.y = -(boundingSize.y * 0.25) - (curtainHeight * 0.5);

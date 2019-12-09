@@ -53901,11 +53901,12 @@ var Board = /** @class */ (function () {
     /**
      * 생성자
      */
-    function Board(scene, modelMgr, camera, camControl) {
+    function Board(scene, modelMgr, camera, camControl, scoreMgr) {
         this.scene = scene;
         this.modelMgr = modelMgr;
         this.camera = camera;
         this.camControl = camControl;
+        this.scoreMgr = scoreMgr;
         this.tileSize = 10;
         this.pickPlates = [];
         this.floorPlates = [];
@@ -54027,6 +54028,7 @@ var Board = /** @class */ (function () {
         }
         var sphere = new three_1.Sphere();
         bounding.getBoundingSphere(sphere);
+        this.scoreMgr.sphere = sphere.clone();
         this.camControl.target = sphere.center;
         this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius);
         this.camControl.object.lookAt(sphere.center);
@@ -54039,7 +54041,9 @@ var Board = /** @class */ (function () {
         bounding.getSize(boundingSize);
         bounding.getCenter(boundingCenter);
         var curtainGeometry = new three_1.BoxBufferGeometry(boundingSize.x, curtainHeight, boundingSize.z);
-        var curtainMaterial = new three_1.MeshPhongMaterial({ color: 0xcccccc });
+        var curtainMaterial = new three_1.MeshBasicMaterial({
+            color: 0xcccccc
+        });
         this.curtain = new three_1.Mesh(curtainGeometry, curtainMaterial);
         this.curtain.position.x = boundingCenter.x;
         this.curtain.position.y = -(boundingSize.y * 0.25) - (curtainHeight * 0.5);
@@ -54283,8 +54287,9 @@ var OrbitControls_1 = __webpack_require__(/*! three/examples/jsm/controls/OrbitC
 var board_1 = __webpack_require__(/*! ./board */ "./src/board.ts");
 var model_1 = __webpack_require__(/*! ./model */ "./src/model.ts");
 var gamelogic_1 = __webpack_require__(/*! ./gamelogic */ "./src/gamelogic.ts");
+var score_1 = __webpack_require__(/*! ./score */ "./src/score.ts");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
-var FONTDATA = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
+var Font_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
 /**
  * 엔진 코어
  */
@@ -54293,7 +54298,6 @@ var Core = /** @class */ (function () {
      * 생성자
      */
     function Core(onReady) {
-        console.log(FONTDATA);
         this.clock = new three_1.Clock();
         // 렌더러 생성
         this.renderer = new three_1.WebGLRenderer({
@@ -54343,21 +54347,24 @@ var Core = /** @class */ (function () {
         this.control.screenSpacePanning = false;
         this.control.rotateSpeed = 0.5;
         this.control.enablePan = false;
-        this.control.maxPolarAngle = Math.PI / 2;
+        this.control.minPolarAngle = Math.PI * 0.1;
+        this.control.maxPolarAngle = Math.PI * 0.5;
         // 창크기변경 이벤트 등록
         window.addEventListener('resize', this.onResize.bind(this), false);
-        // 렌더링 루프 시작
-        this.render();
         var scope = this;
         // 모델 인스턴스
         this.model = new model_1.ModelManager(this.scene, function () {
+            // 스코어 객체
+            scope.scoreMgr = new score_1.ScoreManager(scope.scene, scope.camera, scope.control);
             // 게임판 인스턴스
-            scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control);
+            scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr);
             // 게임로직
-            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.board, scope.model);
+            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr);
             if (onReady) {
                 onReady();
             }
+            // 렌더링 루프 시작
+            scope.render();
         });
     }
     /**
@@ -54375,6 +54382,7 @@ var Core = /** @class */ (function () {
         requestAnimationFrame(this.render.bind(this));
         var deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.scoreMgr.update(deltaTime);
         this.control.update();
         this.renderer.render(this.scene, this.camera);
     };
@@ -54394,6 +54402,18 @@ var Core = /** @class */ (function () {
         this.dispose();
         this.board.createMap(mapWidth, mapHeight);
         this.gameLogic.createCursor();
+    };
+    Core.prototype.Test = function () {
+        var loader = new three_1.FontLoader();
+        var font = loader.parse(Font_Bold_Italic);
+        var geometry = new three_1.TextBufferGeometry('Score: 1234567890', {
+            font: font,
+            size: 10,
+            height: 5
+        });
+        var material = new three_1.MeshPhongMaterial({ color: 0xff0000 });
+        var text = new three_1.Mesh(geometry, material);
+        this.scene.add(text);
     };
     return Core;
 }());
@@ -54431,11 +54451,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var GameLogic = /** @class */ (function () {
-    function GameLogic(scene, camera, board, modelMgr) {
+    function GameLogic(scene, camera, board, modelMgr, scoreMgr) {
         this.scene = scene;
         this.camera = camera;
         this.board = board;
         this.modelMgr = modelMgr;
+        this.scoreMgr = scoreMgr;
         // 픽킹요소 초기화
         this.rayCast = new three_1.Raycaster();
         this.mousePos = new three_1.Vector2();
@@ -54723,6 +54744,96 @@ var ModelManager = /** @class */ (function () {
     return ModelManager;
 }());
 exports.ModelManager = ModelManager;
+
+
+/***/ }),
+
+/***/ "./src/score.ts":
+/*!**********************!*\
+  !*** ./src/score.ts ***!
+  \**********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var FontData_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/**
+ * 점수 관리 클래스
+ */
+var ScoreManager = /** @class */ (function () {
+    /**
+     * 생성자
+     */
+    function ScoreManager(scene, camera, control) {
+        var _this = this;
+        this.scene = scene;
+        this.camera = camera;
+        this.control = control;
+        // 폰트 데이터를 로드하고 준비시킨다.
+        var fontLoader = new three_1.FontLoader();
+        this.fontData = fontLoader.parse(FontData_Bold_Italic);
+        // 사용할 텍스트 Geometry를 미리 생성해 놓는다.
+        var textList = ['Score:', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        this.geometries = {};
+        textList.forEach(function (text) {
+            var geometry = new three_1.TextBufferGeometry(text, {
+                font: _this.fontData,
+                size: 10,
+                height: 5
+            });
+            // geometry의 바운딩을 계산하여 중점으로 이동
+            geometry.computeBoundingBox();
+            var size = new three_1.Vector3();
+            geometry.boundingBox.getSize(size);
+            geometry.translate(size.x * -0.5, size.y * -0.5, size.z * -0.5);
+            _this.geometries[text] = geometry;
+        });
+        // 테스트
+        var material = new three_1.MeshPhongMaterial({ color: 0x0000ff });
+        var mesh = new three_1.Mesh(this.geometries['Score:'], material);
+        this.scene.add(mesh);
+        this.test = mesh;
+    }
+    /**
+     * 업데이트
+     */
+    ScoreManager.prototype.update = function (deltaTime) {
+        if (this.sphere) {
+            // this.test.position.x = this.sphere.center.x;
+            // this.test.position.y = this.sphere.center.y;
+            // this.test.position.z = this.sphere.center.z - this.sphere.radius;
+            // const quat = new Quaternion().setFromUnitVectors(this.camera.up, new Vector3(0, 1, 0));
+            // const offset = this.camera.position.clone();
+            // offset.sub(this.control.target);
+            // offset.applyQuaternion(quat);
+            // const spherical = new Spherical().setFromVector3(offset);
+            // //spherical.theta *= -1.0;
+            // spherical.theta = Math.atan2(this.camera.position.z, this.camera.position.x) * -1.0;
+            // spherical.phi = Math.PI * 0.5;
+            // offset.setFromSpherical(spherical);
+            // this.test.position.copy(this.control.target).add(offset);
+            // this.test.lookAt(this.control.target);
+            var camForward = new three_1.Vector3();
+            this.camera.getWorldDirection(camForward);
+            var target = this.control.target.clone();
+            target.addScaledVector(camForward, this.sphere.radius);
+            var plane = new three_1.Plane().setFromNormalAndCoplanarPoint(new three_1.Vector3(0, 1, 0), this.sphere.center);
+            var project = new three_1.Vector3();
+            plane.projectPoint(target, project);
+            var direction = new three_1.Vector3().subVectors(project, this.control.target);
+            direction.normalize();
+            var result = this.control.target.clone();
+            result.addScaledVector(direction, this.sphere.radius + 10);
+            this.test.position.copy(result);
+            this.test.lookAt(this.control.target);
+        }
+    };
+    return ScoreManager;
+}());
+exports.ScoreManager = ScoreManager;
 
 
 /***/ }),
