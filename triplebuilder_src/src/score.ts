@@ -12,6 +12,8 @@ export class ScoreManager {
     private control: OrbitControls;
     private fontData: Font;
     private geometries: Record<string, TextBufferGeometry>;
+    private scoreTable: number[];
+    private score: number;
 
     public sphere: Sphere;
 
@@ -24,6 +26,19 @@ export class ScoreManager {
         this.scene = scene;
         this.camera = camera;
         this.control = control;
+        this.score = 0;
+
+        // 점수 테이블, 총 타일레벨은 10이지만 0레벨은 점수가 없으므로 9개만 세팅
+        this.scoreTable = [];
+        this.scoreTable.push(5);
+        this.scoreTable.push(10);
+        this.scoreTable.push(20);
+        this.scoreTable.push(35);
+        this.scoreTable.push(55);
+        this.scoreTable.push(80);
+        this.scoreTable.push(110);
+        this.scoreTable.push(145);
+        this.scoreTable.push(200);
 
         // 폰트 데이터를 로드하고 준비시킨다.
         const fontLoader = new FontLoader();
@@ -53,6 +68,29 @@ export class ScoreManager {
         const mesh = new Mesh(this.geometries['Score:'], material);
         this.scene.add(mesh);
         this.test = mesh;
+    }
+
+    /**
+     * 점수 관련 초기화
+     */
+    reset() {
+
+        this.score = 0;
+
+    }
+
+    /**
+     * 타일레벨로 점수를 추가한다.
+     * @param level 레벨
+     */
+    addScore(level: number) {
+
+        if( 1 <= level && level <= 9 ) {
+
+            this.score += this.scoreTable[level-1];
+
+        }
+        console.log(this.score);
     }
 
     /**

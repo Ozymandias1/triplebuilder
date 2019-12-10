@@ -54041,7 +54041,7 @@ var Board = /** @class */ (function () {
         bounding.getSize(boundingSize);
         bounding.getCenter(boundingCenter);
         var curtainGeometry = new three_1.BoxBufferGeometry(boundingSize.x, curtainHeight, boundingSize.z);
-        var curtainMaterial = new three_1.MeshBasicMaterial({
+        var curtainMaterial = new three_1.MeshPhongMaterial({
             color: 0xcccccc
         });
         this.curtain = new three_1.Mesh(curtainGeometry, curtainMaterial);
@@ -54217,6 +54217,8 @@ var Board = /** @class */ (function () {
      */
     Board.prototype.deleteTileObject = function (target, tile, onComplete) {
         var _this = this;
+        // 제거하면서 점수 처리
+        this.scoreMgr.addScore(tile.level);
         // 투명 처리를 할것이므로 재질을 복제처리한다.
         if (target.material instanceof Array) {
             for (var i = 0; i < target.material.length; i++) {
@@ -54772,6 +54774,18 @@ var ScoreManager = /** @class */ (function () {
         this.scene = scene;
         this.camera = camera;
         this.control = control;
+        this.score = 0;
+        // 점수 테이블, 총 타일레벨은 10이지만 0레벨은 점수가 없으므로 9개만 세팅
+        this.scoreTable = [];
+        this.scoreTable.push(5);
+        this.scoreTable.push(10);
+        this.scoreTable.push(20);
+        this.scoreTable.push(35);
+        this.scoreTable.push(55);
+        this.scoreTable.push(80);
+        this.scoreTable.push(110);
+        this.scoreTable.push(145);
+        this.scoreTable.push(200);
         // 폰트 데이터를 로드하고 준비시킨다.
         var fontLoader = new three_1.FontLoader();
         this.fontData = fontLoader.parse(FontData_Bold_Italic);
@@ -54797,6 +54811,22 @@ var ScoreManager = /** @class */ (function () {
         this.scene.add(mesh);
         this.test = mesh;
     }
+    /**
+     * 점수 관련 초기화
+     */
+    ScoreManager.prototype.reset = function () {
+        this.score = 0;
+    };
+    /**
+     * 타일레벨로 점수를 추가한다.
+     * @param level 레벨
+     */
+    ScoreManager.prototype.addScore = function (level) {
+        if (1 <= level && level <= 9) {
+            this.score += this.scoreTable[level - 1];
+        }
+        console.log(this.score);
+    };
     /**
      * 업데이트
      */

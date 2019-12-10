@@ -207,7 +207,7 @@ export class Board {
         bounding.getSize(boundingSize);
         bounding.getCenter(boundingCenter);
         const curtainGeometry = new BoxBufferGeometry(boundingSize.x, curtainHeight, boundingSize.z);
-        const curtainMaterial = new MeshBasicMaterial({ 
+        const curtainMaterial = new MeshPhongMaterial({ 
             color: 0xcccccc 
         });
         this.curtain = new Mesh(curtainGeometry, curtainMaterial);
@@ -394,6 +394,9 @@ export class Board {
      * @param tile 애니메이션 목표 대상 타일
      */
     deleteTileObject(target: Mesh, tile: Tile, onComplete?: Function) {
+
+        // 제거하면서 점수 처리
+        this.scoreMgr.addScore(tile.level);
 
         // 투명 처리를 할것이므로 재질을 복제처리한다.
         if (target.material instanceof Array) {
