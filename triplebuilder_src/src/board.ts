@@ -338,6 +338,8 @@ export class Board {
 
                         // 대상타일은 제거후 생성
                         levelUpTileSource.position.copy(matched[i].object.position);
+                        // 제거하면서 점수 처리
+                        this.scoreMgr.addScore(matched[i]);
                         this.deleteTileObject(<Mesh>matched[i].object, tile, () =>{
                             // 대상타일 제거가 완료되면 레벨업 타일을 생성
                             levelUpTileSource.position.y = -30;
@@ -365,6 +367,8 @@ export class Board {
                         emptyTile.position.copy(matched[i].object.position);
                         this.scene.add(emptyTile);
 
+                        // 제거하면서 점수 처리
+                        this.scoreMgr.addScore(matched[i]);
                         this.deleteTileObject(<Mesh>matched[i].object, tile);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
@@ -379,6 +383,8 @@ export class Board {
                     emptyTile.position.copy(matched[i].object.position);
                     this.scene.add(emptyTile);
 
+                    // 제거하면서 점수 처리
+                    this.scoreMgr.addScore(matched[i]);
                     this.deleteTileObject(<Mesh>matched[i].object, tile);
                     matched[i].object = emptyTile;
                     matched[i].level = 0;
@@ -394,9 +400,6 @@ export class Board {
      * @param tile 애니메이션 목표 대상 타일
      */
     deleteTileObject(target: Mesh, tile: Tile, onComplete?: Function) {
-
-        // 제거하면서 점수 처리
-        this.scoreMgr.addScore(tile.level);
 
         // 투명 처리를 할것이므로 재질을 복제처리한다.
         if (target.material instanceof Array) {
