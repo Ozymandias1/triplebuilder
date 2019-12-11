@@ -53912,12 +53912,13 @@ var Board = /** @class */ (function () {
     /**
      * 생성자
      */
-    function Board(scene, modelMgr, camera, camControl, scoreMgr) {
+    function Board(scene, modelMgr, camera, camControl, scoreMgr, soundMgr) {
         this.scene = scene;
         this.modelMgr = modelMgr;
         this.camera = camera;
         this.camControl = camControl;
         this.scoreMgr = scoreMgr;
+        this.soundMgr = soundMgr;
         this.tileSize = 10;
         this.pickPlates = [];
         this.floorPlates = [];
@@ -54163,6 +54164,7 @@ var Board = /** @class */ (function () {
         }
         // 매치된 타일 처리
         if (matched.length >= 3) {
+            this.soundMgr.playSound('Score');
             var newLevelNumber_1 = tile.level;
             newLevelNumber_1++;
             var zeroTile = this.modelMgr.getModelByLevelNumber(0);
@@ -54307,6 +54309,7 @@ var gamelogic_1 = __webpack_require__(/*! ./gamelogic */ "./src/gamelogic.ts");
 var score_1 = __webpack_require__(/*! ./score */ "./src/score.ts");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var Font_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
+var soundManager_1 = __webpack_require__(/*! ./soundManager */ "./src/soundManager.ts");
 /**
  * 엔진 코어
  */
@@ -54371,12 +54374,14 @@ var Core = /** @class */ (function () {
         var scope = this;
         // 모델 인스턴스
         this.model = new model_1.ModelManager(this.scene, function () {
+            // 사운드 관리자
+            scope.soundMgr = new soundManager_1.SoundManager(scope.camera);
             // 스코어 객체
             scope.scoreMgr = new score_1.ScoreManager(scope.scene, scope.camera, scope.control);
             // 게임판 인스턴스
-            scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr);
+            scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
             // 게임로직
-            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr);
+            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
             if (onReady) {
                 onReady();
             }
@@ -54468,12 +54473,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var GameLogic = /** @class */ (function () {
-    function GameLogic(scene, camera, board, modelMgr, scoreMgr) {
+    function GameLogic(scene, camera, board, modelMgr, scoreMgr, soundMgr) {
         this.scene = scene;
         this.camera = camera;
         this.board = board;
         this.modelMgr = modelMgr;
         this.scoreMgr = scoreMgr;
+        this.soundMgr = soundMgr;
         // 픽킹요소 초기화
         this.rayCast = new three_1.Raycaster();
         this.mousePos = new three_1.Vector2();
@@ -54565,6 +54571,8 @@ var GameLogic = /** @class */ (function () {
                         _this.onPointerMove(event);
                     })
                         .start();
+                    // 사운드재생
+                    this.soundMgr.playSound('CreateBuilding');
                 }
             }
         }
@@ -55026,6 +55034,90 @@ var ScorePopup = /** @class */ (function () {
     return ScorePopup;
 }());
 exports.ScorePopup = ScorePopup;
+
+
+/***/ }),
+
+/***/ "./src/soundManager.ts":
+/*!*****************************!*\
+  !*** ./src/soundManager.ts ***!
+  \*****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+/**
+ * 사운드 관리자
+ */
+var SoundManager = /** @class */ (function () {
+    /**
+     * 생성자
+     */
+    function SoundManager(camera) {
+        this.camera = camera;
+        // 오디오 리스너 생성
+        this.listener = new three_1.AudioListener();
+        this.camera.add(this.listener);
+        // 위치를 가지는 오디오는 아니므로 non-positional 오디오 생성
+        var scope = this;
+        this.sounds = {};
+        var audioLoader = new three_1.AudioLoader();
+        // 배경음악
+        audioLoader.load('sounds/BGM.wav', function (buffer) {
+            var sound = new three_1.Audio(scope.listener);
+            sound.setBuffer(buffer);
+            sound.setLoop(true); // 배경음은 반복재생
+            sound.setVolume(0.25);
+            scope.sounds['BGM'] = sound;
+        }, null, function (err) {
+            console.error(err);
+        });
+        // 건물 생성
+        audioLoader.load('sounds/CreateBuilding.wav', function (buffer) {
+            var sound = new three_1.Audio(scope.listener);
+            sound.setBuffer(buffer);
+            sound.setLoop(false);
+            sound.setVolume(0.25);
+            scope.sounds['CreateBuilding'] = sound;
+        }, null, function (err) {
+            console.error(err);
+        });
+        // 스코어취득
+        audioLoader.load('sounds/Score.wav', function (buffer) {
+            var sound = new three_1.Audio(scope.listener);
+            sound.setBuffer(buffer);
+            sound.setLoop(false);
+            sound.setVolume(0.25);
+            scope.sounds['Score'] = sound;
+        }, null, function (err) {
+            console.error(err);
+        });
+        setTimeout(function () {
+            // 일단 테스트로 배경음을 클래스 인스턴스 생성시점에서 3초후 재생
+            scope.playSound('BGM');
+        }, 3000);
+        var binder = null;
+    }
+    /**
+     * 마우스 이동
+     */
+    SoundManager.prototype.onMouseMove = function (event) {
+    };
+    /**
+     * 사운드재생
+     * @param key 재생할 사운드 키값
+     */
+    SoundManager.prototype.playSound = function (key) {
+        if (this.sounds.hasOwnProperty(key)) {
+            this.sounds[key].play();
+        }
+    };
+    return SoundManager;
+}());
+exports.SoundManager = SoundManager;
 
 
 /***/ }),

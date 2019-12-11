@@ -6,6 +6,7 @@ import { GameLogic } from './gamelogic';
 import { ScoreManager } from './score';
 import * as TWEEN from '@tweenjs/tween.js';
 import * as Font_Bold_Italic from './Open_Sans_Bold_Italic.json';
+import { SoundManager } from './soundManager';
 
 /**
  * 엔진 코어
@@ -26,6 +27,7 @@ export class Core {
     private model: ModelManager;
     private board: Board;
     private gameLogic: GameLogic;
+    private soundMgr: SoundManager;
     
 
     /**
@@ -98,12 +100,15 @@ export class Core {
         const scope = this;
         // 모델 인스턴스
         this.model = new ModelManager(this.scene, function(){
+            // 사운드 관리자
+            scope.soundMgr = new SoundManager(scope.camera);
             // 스코어 객체
             scope.scoreMgr = new ScoreManager(scope.scene, scope.camera, scope.control);
             // 게임판 인스턴스
-            scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr);
+            scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
             // 게임로직
-            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr);
+            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
+            
             if( onReady ) {
                 onReady();
             }

@@ -3,6 +3,7 @@ import { Board, Tile } from "./board";
 import { ModelManager } from "./model";
 import * as TWEEN from '@tweenjs/tween.js';
 import { ScoreManager } from "./score";
+import { SoundManager } from "./soundManager";
 
 export class GameLogic {
 
@@ -11,6 +12,7 @@ export class GameLogic {
     private board: Board;
     private modelMgr: ModelManager;
     private scoreMgr: ScoreManager;
+    private soundMgr: SoundManager;
     private cursor: Object3D;
 
     // 픽킹
@@ -18,13 +20,14 @@ export class GameLogic {
     private mousePos: Vector2;
     private mouseDownPos: Vector2;
 
-    constructor(scene: Scene, camera: Camera, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager) {
+    constructor(scene: Scene, camera: Camera, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager, soundMgr: SoundManager) {
 
         this.scene = scene;
         this.camera = camera;
         this.board = board;
         this.modelMgr = modelMgr;
         this.scoreMgr = scoreMgr;
+        this.soundMgr = soundMgr;
 
         // 픽킹요소 초기화
         this.rayCast = new Raycaster();
@@ -129,6 +132,9 @@ export class GameLogic {
                         this.onPointerMove(event);
                     })
                     .start();
+
+                    // 사운드재생
+                    this.soundMgr.playSound('CreateBuilding');
                 }
             }
         }

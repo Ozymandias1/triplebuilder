@@ -3,6 +3,7 @@ import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ScoreManager } from "./score";
+import { SoundManager } from "./soundManager";
 
 export class Tile {
     public object: Mesh;
@@ -35,6 +36,7 @@ export class Board {
     private matNormal: MeshPhongMaterial;
     private curtain: Mesh;
     private scoreMgr: ScoreManager;
+    private soundMgr: SoundManager;
     
     public pickPlates: Mesh[];
     public floorPlates: Mesh[];
@@ -44,13 +46,14 @@ export class Board {
     /**
      * 생성자
      */
-    constructor(scene: Scene, modelMgr: ModelManager, camera: Camera, camControl: OrbitControls, scoreMgr: ScoreManager) {
+    constructor(scene: Scene, modelMgr: ModelManager, camera: Camera, camControl: OrbitControls, scoreMgr: ScoreManager, soundMgr: SoundManager) {
 
         this.scene = scene;
         this.modelMgr = modelMgr;
         this.camera = camera;
         this.camControl = camControl;
         this.scoreMgr = scoreMgr;
+        this.soundMgr = soundMgr;
         this.tileSize = 10;
         this.pickPlates = [];
         this.floorPlates = [];
@@ -326,6 +329,8 @@ export class Board {
 
         // 매치된 타일 처리
         if( matched.length >= 3 ) {
+            this.soundMgr.playSound('Score');
+            
             let newLevelNumber = tile.level;
             newLevelNumber++;
             const zeroTile = this.modelMgr.getModelByLevelNumber(0);
