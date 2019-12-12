@@ -1,6 +1,6 @@
 import * as FontData_Bold_Italic from './Open_Sans_Bold_Italic.json';
 import * as FontData_Bold from './Open_Sans_Bold.json';
-import { Font, FontLoader, TextBufferGeometry, Scene, MeshPhongMaterial, Mesh, Vector3, Sphere, Quaternion, PerspectiveCamera, Camera, Spherical, Plane, Box3 } from 'three';
+import { Font, FontLoader, TextBufferGeometry, Scene, MeshPhongMaterial, Mesh, Vector3, Sphere, Quaternion, PerspectiveCamera, Camera, Spherical, Plane, Box3, Group } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { ScorePopup } from './scorePopup';
 import { Tile } from './board.js';
@@ -27,7 +27,10 @@ export class ScoreManager {
 
     public sphere: Sphere;
 
-    private test: any;
+    private resultScoreRoot: Group;
+    private resultScoreSharedMaterial: MeshPhongMaterial;
+    private resultScoreInterval: number;
+
     /**
      * 생성자
      */
@@ -57,9 +60,10 @@ export class ScoreManager {
 
         // 사용할 텍스트 Geometry를 미리 생성해 놓는다.
         // 점수표시용
+        this.resultScoreInterval = 0;
         const textList = [ 'Score:', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ];
         this.geometries = {};
-        textList.forEach( text => {
+        textList.forEach( (text, i) => {
             const geometry = new TextBufferGeometry(text, {
                 font: this.fontData,
                 size: 10,
@@ -73,6 +77,9 @@ export class ScoreManager {
             geometry.translate( size.x * -0.5, size.y * -0.5, size.z * -0.5 );
 
             this.geometries[text] = geometry;
+            if( 0 < i ) {
+                this.resultScoreInterval = Math.max(this.resultScoreInterval, size.x);
+            }
         });
         
         // 팝업 점수용
@@ -106,16 +113,11 @@ export class ScoreManager {
         this.popupObjList = [];
 
         // 테스트
-        const material = new MeshPhongMaterial({ color: 0x0000ff });
-        let mesh = new Mesh(this.geometries['Score:'], material);
-        this.scene.add(mesh);
-        this.test = mesh;
+        this.resultScoreSharedMaterial = new MeshPhongMaterial({ color: 0x0000ff });
+        this.resultScoreRoot = new Group();
+        this.scene.add(this.resultScoreRoot);
 
-        // // 팝업 테스트
-        // mesh = new Mesh(this.popupGeometries['3'], material);
-        // this.scene.add(mesh);
-        // mesh.position.set(10, 10, 10);
-        
+        this.updateScoreMesh();        
     }
 
     /**
@@ -159,6 +161,48 @@ export class ScoreManager {
             // 팝업 효과 생성
             const popup = new ScorePopup(this.scene, geometryArray, this.sharedPopupMaterial, spawnLocation);
             this.popupObjList.push(popup);
+
+            this.updateScoreMesh();
+        }
+    }
+
+    /**
+     * 누적점수 가시화 객체를 업데이트 한다.
+     */
+    updateScoreMesh() {
+
+        // 이전 자식 객체 제거
+        const childCount = this.resultScoreRoot.children.length;
+        for(let i = 0; i < childCount; i++) {
+            const child = this.resultScoreRoot.children[0];
+            this.resultScoreRoot.remove(child);
+        }
+
+        // Score 객체 추가
+        let mesh = new Mesh(this.geometries['Score:'], this.resultScoreSharedMaterial);
+        this.resultScoreRoot.add(mesh);
+        mesh.position.set(0, 0, 0);
+
+        // Score 바운딩 계산
+        const bBox = this.geometries['Score:'].boundingBox.clone();
+        const scoreCenter = new Vector3(), scoreSize = new Vector3();
+        bBox.getCenter(scoreCenter);
+        bBox.getSize(scoreSize);
+
+        // 시작지점 공백용사이즈를 '0'으로 계산
+        const whiteSpaceSize = new Vector3();
+        this.geometries['0'].boundingBox.getSize(whiteSpaceSize);
+
+        // 점수 문자화를 하고 0번쨰부터 n번째까지 가시화 객체로 생성한다.
+        const strScore = this.score.toString();
+        for(let i = 0; i < strScore.length; i++) {
+
+            // 생성
+            mesh = new Mesh(this.geometries[strScore[i]], this.resultScoreSharedMaterial);
+            this.resultScoreRoot.add(mesh);
+
+            // 위치 설정
+            mesh.position.x = scoreCenter.x + (scoreSize.x * 0.5) + whiteSpaceSize.x + (this.resultScoreInterval * i);
         }
     }
 
@@ -168,23 +212,6 @@ export class ScoreManager {
     update(deltaTime: number) {
 
         if( this.sphere ) {
-
-            // this.test.position.x = this.sphere.center.x;
-            // this.test.position.y = this.sphere.center.y;
-            // this.test.position.z = this.sphere.center.z - this.sphere.radius;
-
-            // const quat = new Quaternion().setFromUnitVectors(this.camera.up, new Vector3(0, 1, 0));
-            // const offset = this.camera.position.clone();
-            // offset.sub(this.control.target);
-            // offset.applyQuaternion(quat);
-            // const spherical = new Spherical().setFromVector3(offset);
-            // //spherical.theta *= -1.0;
-            // spherical.theta = Math.atan2(this.camera.position.z, this.camera.position.x) * -1.0;
-            // spherical.phi = Math.PI * 0.5;
-
-            // offset.setFromSpherical(spherical);
-            // this.test.position.copy(this.control.target).add(offset);
-            // this.test.lookAt(this.control.target);
 
             const camForward = new Vector3();
             this.camera.getWorldDirection(camForward);
@@ -200,9 +227,10 @@ export class ScoreManager {
 
             const result = this.control.target.clone();
             result.addScaledVector(direction, this.sphere.radius + 10);
+            result.y += 10;
 
-            this.test.position.copy(result);
-            this.test.lookAt(this.control.target);
+            this.resultScoreRoot.position.copy(result);
+            this.resultScoreRoot.lookAt(this.control.target);
         }
 
         // 팝업 객체리스트를 역순으로 순회하며 애니메이션이 완료된 객체는 제거한다.
