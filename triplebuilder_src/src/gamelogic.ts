@@ -127,7 +127,7 @@ export class GameLogic {
                     .easing(TWEEN.default.Easing.Quadratic.Out)
                     .onComplete(()=>{
                         // 3타일 매치 체크
-                        this.board.checkTriple(targetTile);
+                        this.board.checkTriple(targetTile, 1);
                         this.createCursor();
                         this.onPointerMove(event);
                     })
@@ -145,9 +145,8 @@ export class GameLogic {
      */
     createCursor(level?: number) {
 
-        //const level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
         if( !level ) {
-            level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+            level = 1;//this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
         }
         const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
@@ -160,10 +159,6 @@ export class GameLogic {
 
             sourceObject.traverse((child) => {
                 if( child instanceof Mesh ) {
-                    // const edgeGeometry = new EdgesGeometry(child.geometry);
-                    // const edgeMaterial = new LineBasicMaterial({color: 0x000000});
-                    // const edge = new LineSegments(edgeGeometry, edgeMaterial);
-                    // this.cursor.add(edge);
 
                     let cursorMaterial = null;
                     if( child.material instanceof Array ) {

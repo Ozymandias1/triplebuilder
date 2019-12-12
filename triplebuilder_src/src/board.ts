@@ -223,8 +223,9 @@ export class Board {
     /**
      * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
      * @param tile 타일 객체
+     * @param comboRatio 콤보 배율
      */
-    checkTriple(tile: Tile) {
+    checkTriple(tile: Tile, comboRatio: number) {
 
         if( tile.level === 0 ) {
             return;
@@ -344,7 +345,7 @@ export class Board {
                         // 대상타일은 제거후 생성
                         levelUpTileSource.position.copy(matched[i].object.position);
                         // 제거하면서 점수 처리
-                        this.scoreMgr.addScore(matched[i]);
+                        this.scoreMgr.addScore(matched[i], comboRatio);
                         this.deleteTileObject(<Mesh>matched[i].object, tile, () =>{
                             // 대상타일 제거가 완료되면 레벨업 타일을 생성
                             levelUpTileSource.position.y = -30;
@@ -360,7 +361,7 @@ export class Board {
                                 matched[i].level = newLevelNumber;
                                 
                                 // 매치된 타일처리후에 매치된것이 있을수 있으므로
-                                this.checkTriple(matched[i]);
+                                this.checkTriple(matched[i], comboRatio + 1);
                             })
                             .start();
                         });
@@ -373,7 +374,7 @@ export class Board {
                         this.scene.add(emptyTile);
 
                         // 제거하면서 점수 처리
-                        this.scoreMgr.addScore(matched[i]);
+                        this.scoreMgr.addScore(matched[i], comboRatio);
                         this.deleteTileObject(<Mesh>matched[i].object, tile);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
@@ -389,7 +390,7 @@ export class Board {
                     this.scene.add(emptyTile);
 
                     // 제거하면서 점수 처리
-                    this.scoreMgr.addScore(matched[i]);
+                    this.scoreMgr.addScore(matched[i], comboRatio);
                     this.deleteTileObject(<Mesh>matched[i].object, tile);
                     matched[i].object = emptyTile;
                     matched[i].level = 0;

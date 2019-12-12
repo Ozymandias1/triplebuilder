@@ -54065,8 +54065,9 @@ var Board = /** @class */ (function () {
     /**
      * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
      * @param tile 타일 객체
+     * @param comboRatio 콤보 배율
      */
-    Board.prototype.checkTriple = function (tile) {
+    Board.prototype.checkTriple = function (tile, comboRatio) {
         var _this = this;
         if (tile.level === 0) {
             return;
@@ -54175,7 +54176,7 @@ var Board = /** @class */ (function () {
                         // 대상타일은 제거후 생성
                         levelUpTileSource_1.position.copy(matched[i].object.position);
                         // 제거하면서 점수 처리
-                        this_1.scoreMgr.addScore(matched[i]);
+                        this_1.scoreMgr.addScore(matched[i], comboRatio);
                         this_1.deleteTileObject(matched[i].object, tile, function () {
                             // 대상타일 제거가 완료되면 레벨업 타일을 생성
                             levelUpTileSource_1.position.y = -30;
@@ -54190,7 +54191,7 @@ var Board = /** @class */ (function () {
                                 matched[i].object = levelUpTileSource_1;
                                 matched[i].level = newLevelNumber_1;
                                 // 매치된 타일처리후에 매치된것이 있을수 있으므로
-                                _this.checkTriple(matched[i]);
+                                _this.checkTriple(matched[i], comboRatio + 1);
                             })
                                 .start();
                         });
@@ -54201,7 +54202,7 @@ var Board = /** @class */ (function () {
                         emptyTile.position.copy(matched[i].object.position);
                         this_1.scene.add(emptyTile);
                         // 제거하면서 점수 처리
-                        this_1.scoreMgr.addScore(matched[i]);
+                        this_1.scoreMgr.addScore(matched[i], comboRatio);
                         this_1.deleteTileObject(matched[i].object, tile);
                         matched[i].object = emptyTile;
                         matched[i].level = 0;
@@ -54220,7 +54221,7 @@ var Board = /** @class */ (function () {
                     emptyTile.position.copy(matched[i].object.position);
                     this.scene.add(emptyTile);
                     // 제거하면서 점수 처리
-                    this.scoreMgr.addScore(matched[i]);
+                    this.scoreMgr.addScore(matched[i], comboRatio);
                     this.deleteTileObject(matched[i].object, tile);
                     matched[i].object = emptyTile;
                     matched[i].level = 0;
@@ -54566,7 +54567,7 @@ var GameLogic = /** @class */ (function () {
                         .easing(TWEEN.default.Easing.Quadratic.Out)
                         .onComplete(function () {
                         // 3타일 매치 체크
-                        _this.board.checkTriple(targetTile_1);
+                        _this.board.checkTriple(targetTile_1, 1);
                         _this.createCursor();
                         _this.onPointerMove(event);
                     })
@@ -54582,9 +54583,8 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.createCursor = function (level) {
         var _this = this;
-        //const level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
         if (!level) {
-            level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+            level = 1; //this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
         }
         var sourceObject = this.modelMgr.getModelByLevelNumber(level);
         // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
@@ -54594,10 +54594,6 @@ var GameLogic = /** @class */ (function () {
             this.cursor.name = 'Cursor';
             sourceObject.traverse(function (child) {
                 if (child instanceof three_1.Mesh) {
-                    // const edgeGeometry = new EdgesGeometry(child.geometry);
-                    // const edgeMaterial = new LineBasicMaterial({color: 0x000000});
-                    // const edge = new LineSegments(edgeGeometry, edgeMaterial);
-                    // this.cursor.add(edge);
                     var cursorMaterial = null;
                     if (child.material instanceof Array) {
                         cursorMaterial = [];
@@ -54865,23 +54861,6 @@ var ScoreManager = /** @class */ (function () {
         this.resultScoreRoot = new three_1.Group();
         this.scene.add(this.resultScoreRoot);
         this.updateScoreMesh();
-        // let mesh = new Mesh(this.geometries['Score:'], this.resultScoreSharedMaterial);
-        // this.resultScoreRoot.add(mesh);
-        // mesh.position.set(0, 0, 0);
-        // const bBox = new Box3().setFromObject(mesh);
-        // const center = new Vector3(), size = new Vector3();
-        // bBox.getCenter(center);
-        // bBox.getSize(size);
-        // mesh = new Mesh(this.geometries['1'], this.resultScoreSharedMaterial);
-        // this.resultScoreRoot.add(mesh);
-        // mesh.position.x = center.x + (size.x * 0.5);  
-        // bBox.setFromObject(mesh);      
-        // bBox.getSize(size);
-        // mesh.position.x += size.x;
-        // // 팝업 테스트
-        // mesh = new Mesh(this.popupGeometries['3'], material);
-        // this.scene.add(mesh);
-        // mesh.position.set(10, 10, 10);
     }
     /**
      * 점수 관련 초기화
@@ -54892,11 +54871,12 @@ var ScoreManager = /** @class */ (function () {
     /**
      * 타일레벨로 점수를 추가한다.
      * @param tile 레벨
+     * @param comboRatio 콤보배율
      */
-    ScoreManager.prototype.addScore = function (tile) {
+    ScoreManager.prototype.addScore = function (tile, comboRatio) {
         if (1 <= tile.level && tile.level <= 9) {
             var addScore = this.scoreTable[tile.level - 1];
-            this.score += addScore;
+            this.score += (addScore * comboRatio);
             // 팝업 효과 생성
             // 점수를 문자열로 변환하여 geometry 배열을 전달한다.
             var strScore = addScore.toString();
@@ -54955,20 +54935,6 @@ var ScoreManager = /** @class */ (function () {
      */
     ScoreManager.prototype.update = function (deltaTime) {
         if (this.sphere) {
-            // this.test.position.x = this.sphere.center.x;
-            // this.test.position.y = this.sphere.center.y;
-            // this.test.position.z = this.sphere.center.z - this.sphere.radius;
-            // const quat = new Quaternion().setFromUnitVectors(this.camera.up, new Vector3(0, 1, 0));
-            // const offset = this.camera.position.clone();
-            // offset.sub(this.control.target);
-            // offset.applyQuaternion(quat);
-            // const spherical = new Spherical().setFromVector3(offset);
-            // //spherical.theta *= -1.0;
-            // spherical.theta = Math.atan2(this.camera.position.z, this.camera.position.x) * -1.0;
-            // spherical.phi = Math.PI * 0.5;
-            // offset.setFromSpherical(spherical);
-            // this.test.position.copy(this.control.target).add(offset);
-            // this.test.lookAt(this.control.target);
             var camForward = new three_1.Vector3();
             this.camera.getWorldDirection(camForward);
             var target = this.control.target.clone();

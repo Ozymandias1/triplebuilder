@@ -132,13 +132,14 @@ export class ScoreManager {
     /**
      * 타일레벨로 점수를 추가한다.
      * @param tile 레벨
+     * @param comboRatio 콤보배율
      */
-    addScore(tile: Tile) {
+    addScore(tile: Tile, comboRatio: number) {
 
         if( 1 <= tile.level && tile.level <= 9 ) {
 
             const addScore = this.scoreTable[tile.level-1]
-            this.score += addScore;
+            this.score += (addScore * comboRatio);
 
             // 팝업 효과 생성
             // 점수를 문자열로 변환하여 geometry 배열을 전달한다.
