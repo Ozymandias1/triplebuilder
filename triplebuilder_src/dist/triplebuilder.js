@@ -54860,15 +54860,24 @@ var ScoreManager = /** @class */ (function () {
         this.score = 0;
         // 점수 테이블, 총 타일레벨은 10이지만 0레벨은 점수가 없으므로 9개만 세팅
         this.scoreTable = [];
-        this.scoreTable.push(5);
-        this.scoreTable.push(10);
-        this.scoreTable.push(20);
-        this.scoreTable.push(35);
-        this.scoreTable.push(55);
-        this.scoreTable.push(80);
-        this.scoreTable.push(110);
-        this.scoreTable.push(145);
+        // this.scoreTable.push(5);
+        // this.scoreTable.push(10);
+        // this.scoreTable.push(20);
+        // this.scoreTable.push(35);
+        // this.scoreTable.push(55);
+        // this.scoreTable.push(80);
+        // this.scoreTable.push(110);
+        // this.scoreTable.push(145);
+        // this.scoreTable.push(200);        
+        this.scoreTable.push(50);
+        this.scoreTable.push(100);
         this.scoreTable.push(200);
+        this.scoreTable.push(350);
+        this.scoreTable.push(550);
+        this.scoreTable.push(800);
+        this.scoreTable.push(1100);
+        this.scoreTable.push(1450);
+        this.scoreTable.push(2000);
         // 폰트 데이터를 로드하고 준비시킨다.
         var fontLoader = new three_1.FontLoader();
         this.fontData = fontLoader.parse(FontData_Bold_Italic);
@@ -55002,6 +55011,21 @@ var ScoreManager = /** @class */ (function () {
             this.resultScoreRoot.add(mesh);
             // 위치 설정
             mesh.position.x = scoreCenter.x + (scoreSize.x * 0.5) + whiteSpaceSize.x + (this.resultScoreInterval * i);
+            bBox.expandByObject(mesh);
+        }
+        // 위치 조정
+        var minX = Number.MAX_VALUE, maxX = Number.MIN_VALUE, halfX = null;
+        for (var i = 1; i < this.resultScoreRoot.children.length; i++) {
+            var child = this.resultScoreRoot.children[i];
+            var currBox = child.geometry.boundingBox.clone();
+            currBox.translate(child.position);
+            minX = Math.min(minX, currBox.min.x);
+            maxX = Math.max(maxX, currBox.max.x);
+        }
+        halfX = (maxX - minX) * 0.5;
+        for (var i = 0; i < this.resultScoreRoot.children.length; i++) {
+            var child = this.resultScoreRoot.children[i];
+            child.translateX(-halfX);
         }
     };
     /**
