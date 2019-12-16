@@ -53905,6 +53905,13 @@ var Tile = /** @class */ (function () {
     return Tile;
 }());
 exports.Tile = Tile;
+var TileFacingAngleData = /** @class */ (function () {
+    function TileFacingAngleData(dir, angle) {
+        this.direction = dir.clone();
+        this.angle = angle;
+    }
+    return TileFacingAngleData;
+}());
 /**
  * 게임판 관리 클래스
  */
@@ -53927,6 +53934,15 @@ var Board = /** @class */ (function () {
         this.prevPickPlate = null;
         this.matSelect = new three_1.MeshPhongMaterial({ color: 0xffff00 });
         this.matNormal = new three_1.MeshPhongMaterial({ color: 0xcccccc });
+        this.boardBounding = new three_1.Box3().makeEmpty();
+        // 카메라 향한 타일 회전 처리 관련
+        this.isTileFacingToCamera = false;
+        this.tileFacingAngleArray = [];
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new three_1.Vector3(1, 0, 0), Math.PI * -0.5));
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new three_1.Vector3(-1, 0, 0), Math.PI * 0.5));
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new three_1.Vector3(0, 0, 1), Math.PI));
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new three_1.Vector3(0, 0, -1), 0));
+        this.prevFacingIndex = null;
         // 픽킹용 바닥판
         var geometry = new three_1.BoxBufferGeometry(this.tileSize, 1, this.tileSize, 1, 1, 1);
         var material = new three_1.MeshBasicMaterial();
@@ -53980,6 +53996,7 @@ var Board = /** @class */ (function () {
             this.curtain.material.dispose();
             this.curtain = null;
         }
+        this.boardBounding.makeEmpty();
     };
     /**
      * 맵 생성
@@ -54061,6 +54078,8 @@ var Board = /** @class */ (function () {
         this.curtain.position.y = -(boundingSize.y * 0.25) - (curtainHeight * 0.5);
         this.curtain.position.z = boundingCenter.z;
         this.scene.add(this.curtain);
+        // 바운딩 저장
+        this.boardBounding.copy(bounding);
     };
     /**
      * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
@@ -54285,6 +54304,48 @@ var Board = /** @class */ (function () {
         })
             .start();
     };
+    /**
+     * 보드판 업데이트 처리
+     */
+    Board.prototype.update = function (deltaTime) {
+        if (this.isTileFacingToCamera) {
+            // 보드판 중심점 취득
+            var boardCenter = new three_1.Vector3();
+            this.boardBounding.getCenter(boardCenter);
+            // 보드판 중심점을 기준으로하는 평면 생성
+            var plane = new three_1.Plane().setFromNormalAndCoplanarPoint(new three_1.Vector3(0, 1, 0), boardCenter);
+            // 카메라 위치점을 생성한 평면에 투영
+            var projCamPoint = new three_1.Vector3();
+            plane.projectPoint(this.camera.position, projCamPoint);
+            // 카메라에서 보드판 중심점을 향하는 방향 계산
+            var dirToCenter = new three_1.Vector3().subVectors(boardCenter, projCamPoint);
+            dirToCenter.normalize();
+            // 각도 데이터배열에서 가장 가까운 각도를 가지는 데이터를 찾음
+            var closestIndex = -1;
+            var prevAngle = Number.MAX_VALUE;
+            for (var i = 0; i < this.tileFacingAngleArray.length; i++) {
+                var currData = this.tileFacingAngleArray[i];
+                var currAngle = dirToCenter.angleTo(currData.direction);
+                if (currAngle < prevAngle) {
+                    prevAngle = currAngle;
+                    closestIndex = i;
+                }
+            }
+            // 찾은 데이터 인덱스가 이전프레임에서 계산된 인덱스와 다르다면 각 타일의 회전값 설정
+            if (this.prevFacingIndex !== closestIndex) {
+                var angleData = this.tileFacingAngleArray[closestIndex];
+                for (var w = 0; w < this.mapWidth; w++) {
+                    for (var h = 0; h < this.mapHeight; h++) {
+                        var tile = this.map[w][h];
+                        if (tile.level > 0) {
+                            tile.object.rotation.y = angleData.angle;
+                        }
+                    }
+                }
+                this.prevFacingIndex = closestIndex;
+            }
+        }
+    };
     return Board;
 }());
 exports.Board = Board;
@@ -54406,6 +54467,7 @@ var Core = /** @class */ (function () {
         var deltaTime = this.clock.getDelta();
         TWEEN.default.update();
         this.scoreMgr.update(deltaTime);
+        this.board.update(deltaTime);
         this.control.update();
         this.renderer.render(this.scene, this.camera);
     };
@@ -54833,7 +54895,7 @@ var ScoreManager = /** @class */ (function () {
             }
         });
         // 팝업 점수용
-        var popupTextList = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        var popupTextList = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'x'];
         this.popupGeometries = {};
         popupTextList.forEach(function (text) {
             var geometry = new three_1.TextBufferGeometry(text, {
@@ -54846,6 +54908,10 @@ var ScoreManager = /** @class */ (function () {
             var size = new three_1.Vector3();
             geometry.boundingBox.getSize(size);
             geometry.translate(size.x * -0.5, size.y * -0.5, size.z * -0.5);
+            // 콤보배율용 'x'는 좀더 작게 처리
+            if (text === 'x') {
+                geometry.scale(0.75, 0.75, 0.75);
+            }
             _this.popupGeometries[text] = geometry;
         });
         // 팝업 효과 공유 재질
@@ -54856,7 +54922,7 @@ var ScoreManager = /** @class */ (function () {
         });
         // 팝업 객체 리스트
         this.popupObjList = [];
-        // 테스트
+        // 누적점수
         this.resultScoreSharedMaterial = new three_1.MeshPhongMaterial({ color: 0x0000ff });
         this.resultScoreRoot = new three_1.Group();
         this.scene.add(this.resultScoreRoot);
@@ -54883,6 +54949,14 @@ var ScoreManager = /** @class */ (function () {
             var geometryArray = [];
             for (var i = 0; i < strScore.length; i++) {
                 geometryArray.push(this.popupGeometries[strScore[i]]);
+            }
+            // 콤보 배율처리
+            if (comboRatio > 1.0) {
+                var strCombo = parseInt(comboRatio.toString()).toString();
+                geometryArray.push(this.popupGeometries['x']);
+                for (var i = 0; i < strCombo.length; i++) {
+                    geometryArray.push(this.popupGeometries[strCombo[i]]);
+                }
             }
             // 팝업효과 생성 위치 계산
             var box = new three_1.Box3().setFromObject(tile.object);

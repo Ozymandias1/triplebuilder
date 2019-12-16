@@ -1,4 +1,4 @@
-import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial, Camera, Box3, Sphere, Vector3 } from "three";
+import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial, Camera, Box3, Sphere, Vector3, Plane } from "three";
 import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -16,6 +16,16 @@ export class Tile {
         this.tileW = w;
         this.tileH = h;
         this.level = level;
+    }
+}
+
+class TileFacingAngleData {
+    public direction: Vector3;
+    public angle: number;
+
+    constructor(dir: Vector3, angle: number) {
+        this.direction = dir.clone();
+        this.angle = angle;
     }
 }
 
@@ -42,6 +52,11 @@ export class Board {
     public floorPlates: Mesh[];
     public mapWidth: number;
     public mapHeight: number;
+    public boardBounding: Box3;
+
+    public isTileFacingToCamera: boolean;
+    private tileFacingAngleArray: TileFacingAngleData[];
+    private prevFacingIndex: number;
 
     /**
      * 생성자
@@ -62,6 +77,17 @@ export class Board {
         this.prevPickPlate = null;
         this.matSelect = new MeshPhongMaterial({color: 0xffff00});
         this.matNormal = new MeshPhongMaterial({color: 0xcccccc});
+        this.boardBounding = new Box3().makeEmpty();
+
+        // 카메라 향한 타일 회전 처리 관련
+        this.isTileFacingToCamera = false;
+        this.tileFacingAngleArray = [];
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new Vector3(1, 0, 0), Math.PI * -0.5));
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new Vector3(-1, 0, 0), Math.PI * 0.5));
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new Vector3(0, 0, 1), Math.PI));
+        this.tileFacingAngleArray.push(new TileFacingAngleData(new Vector3(0, 0, -1), 0));
+        this.prevFacingIndex = null;
+
         
         // 픽킹용 바닥판
         const geometry = new BoxBufferGeometry(this.tileSize, 1, this.tileSize, 1, 1, 1);
@@ -122,6 +148,8 @@ export class Board {
             (<MeshPhongMaterial>this.curtain.material).dispose();
             this.curtain = null;
         }
+
+        this.boardBounding.makeEmpty();
     }
 
     /**
@@ -218,6 +246,9 @@ export class Board {
         this.curtain.position.y = -(boundingSize.y * 0.25) - (curtainHeight * 0.5);
         this.curtain.position.z = boundingCenter.z;
         this.scene.add(this.curtain);
+
+        // 바운딩 저장
+        this.boardBounding.copy(bounding);
     }
 
     /**
@@ -459,5 +490,59 @@ export class Board {
             }
         })
         .start();
+    }
+
+    /**
+     * 보드판 업데이트 처리
+     */
+    update(deltaTime: number) {
+
+        if( this.isTileFacingToCamera ) {
+
+            // 보드판 중심점 취득
+            const boardCenter = new Vector3();
+            this.boardBounding.getCenter(boardCenter);
+
+            // 보드판 중심점을 기준으로하는 평면 생성
+            const plane = new Plane().setFromNormalAndCoplanarPoint(new Vector3(0, 1, 0), boardCenter);
+
+            // 카메라 위치점을 생성한 평면에 투영
+            const projCamPoint = new Vector3();
+            plane.projectPoint(this.camera.position, projCamPoint);
+
+            // 카메라에서 보드판 중심점을 향하는 방향 계산
+            const dirToCenter = new Vector3().subVectors(boardCenter, projCamPoint);
+            dirToCenter.normalize();
+
+            // 각도 데이터배열에서 가장 가까운 각도를 가지는 데이터를 찾음
+            let closestIndex = -1;
+            let prevAngle = Number.MAX_VALUE;
+            for(let i = 0; i < this.tileFacingAngleArray.length; i++) {
+                const currData = this.tileFacingAngleArray[i];
+                const currAngle = dirToCenter.angleTo(currData.direction);
+                if( currAngle < prevAngle ) {
+                    prevAngle = currAngle;
+                    closestIndex = i;
+                }
+            }
+
+            // 찾은 데이터 인덱스가 이전프레임에서 계산된 인덱스와 다르다면 각 타일의 회전값 설정
+            if( this.prevFacingIndex !== closestIndex ) {
+
+                const angleData = this.tileFacingAngleArray[closestIndex];
+
+                for(let w = 0; w < this.mapWidth; w++) {
+                    for(let h = 0; h < this.mapHeight; h++) {
+                        const tile = this.map[w][h];
+                        if( tile.level > 0 ) {
+                            tile.object.rotation.y = angleData.angle;
+                        }
+                    }
+                }
+
+
+                this.prevFacingIndex = closestIndex;
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-import { Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneBufferGeometry, Scene, WebGLRenderer, Raycaster, Vector2, FontLoader, TextBufferGeometry } from 'three';
+import { Math as THREEMATH, Clock, Color, DirectionalLight, HemisphereLight, Mesh, MeshPhongMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneBufferGeometry, Scene, WebGLRenderer, Raycaster, Vector2, FontLoader, TextBufferGeometry, Vector3, Plane } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Board } from './board';
 import { ModelManager } from './model';
@@ -139,8 +139,9 @@ export class Core {
         const deltaTime = this.clock.getDelta();
         TWEEN.default.update();
         this.scoreMgr.update(deltaTime);
+        this.board.update(deltaTime);
         this.control.update();
-
+        
         this.renderer.render(this.scene, this.camera);
     }
 

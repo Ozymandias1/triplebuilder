@@ -83,7 +83,7 @@ export class ScoreManager {
         });
         
         // 팝업 점수용
-        const popupTextList = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        const popupTextList = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'x'];
         this.popupGeometries = {};
         popupTextList.forEach( text => {
             const geometry = new TextBufferGeometry(text, {
@@ -97,6 +97,11 @@ export class ScoreManager {
             const size = new Vector3();
             geometry.boundingBox.getSize(size);
             geometry.translate( size.x * -0.5, size.y * -0.5, size.z * -0.5 );
+
+            // 콤보배율용 'x'는 좀더 작게 처리
+            if( text === 'x' ) {
+                geometry.scale(0.75, 0.75, 0.75);
+            }
 
             this.popupGeometries[text] = geometry;
 
@@ -112,7 +117,7 @@ export class ScoreManager {
         // 팝업 객체 리스트
         this.popupObjList = [];
 
-        // 테스트
+        // 누적점수
         this.resultScoreSharedMaterial = new MeshPhongMaterial({ color: 0x0000ff });
         this.resultScoreRoot = new Group();
         this.scene.add(this.resultScoreRoot);
@@ -147,6 +152,16 @@ export class ScoreManager {
             const geometryArray = [];
             for(let i = 0; i < strScore.length; i++) {
                 geometryArray.push(this.popupGeometries[strScore[i]]);
+            }
+
+            // 콤보 배율처리
+            if( comboRatio > 1.0 ) {
+                const strCombo = parseInt(comboRatio.toString()).toString();
+
+                geometryArray.push(this.popupGeometries['x']);
+                for(let i = 0; i < strCombo.length; i++) {
+                    geometryArray.push(this.popupGeometries[strCombo[i]]);
+                }
             }
 
             // 팝업효과 생성 위치 계산
