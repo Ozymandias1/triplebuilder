@@ -4,6 +4,7 @@ import * as TWEEN from '@tweenjs/tween.js';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ScoreManager } from "./score";
 import { SoundManager } from "./soundManager";
+import { TileHolder } from "./tileHolder";
 
 export class Tile {
     public object: Mesh;
@@ -47,6 +48,7 @@ export class Board {
     private curtain: Mesh;
     private scoreMgr: ScoreManager;
     private soundMgr: SoundManager;
+    private tileHolder: TileHolder;
     
     public pickPlates: Mesh[];
     public floorPlates: Mesh[];
@@ -220,6 +222,7 @@ export class Board {
         const sphere = new Sphere();
         bounding.getBoundingSphere(sphere);
         this.scoreMgr.sphere = sphere.clone();
+        this.tileHolder.boardSphere = sphere.clone();
 
         this.camControl.target = sphere.center;
         this.camControl.object.position.set(
@@ -544,5 +547,12 @@ export class Board {
                 this.prevFacingIndex = closestIndex;
             }
         }
+    }
+    
+    /**
+     * 타일홀더 인스턴스 설정
+     */
+    setTileHolder(holder: TileHolder) {
+        this.tileHolder = holder;
     }
 }

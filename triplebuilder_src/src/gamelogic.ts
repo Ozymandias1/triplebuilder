@@ -4,6 +4,7 @@ import { ModelManager } from "./model";
 import * as TWEEN from '@tweenjs/tween.js';
 import { ScoreManager } from "./score";
 import { SoundManager } from "./soundManager";
+import { TileHolder } from "./tileHolder";
 
 export class GameLogic {
 
@@ -14,6 +15,7 @@ export class GameLogic {
     private scoreMgr: ScoreManager;
     private soundMgr: SoundManager;
     private cursor: Object3D;
+    private tileHolder: TileHolder;
 
     // 픽킹
     private rayCast: Raycaster;
@@ -103,7 +105,15 @@ export class GameLogic {
             const currPointerUpPos = new Vector2(event.screenX, event.screenY);
             if( currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0 ) {
 
-                if( this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0 ) {
+                // 홀드 기능이 먼저 작동되었는지 체크
+                if( this.tileHolder.pickTest(this.rayCast) ) {
+                    
+                    // 타일에 홀드할 타일레벨 설정
+                    const prevLevel = this.tileHolder.setHoldTile(this.cursor.userData['level']);
+                    // 새 커서 생성
+                    this.createCursor(prevLevel);
+
+                } else if( this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0 ) {
                     const targetTile = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
                     targetTile.level = this.cursor.userData['level'];
@@ -146,11 +156,11 @@ export class GameLogic {
     createCursor(level?: number) {
 
         if( !level ) {
-            level = 1;//this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+            level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;//level = 1;//
         }
         const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
-        // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
+        // 원본 객체의 정보를 통해 새 객체 생성
         if( sourceObject ) {
 
             this.disposeCursor();
@@ -246,5 +256,12 @@ export class GameLogic {
                 }
             });
         }
+    }
+    
+    /**
+     * 타일 홀더 인스턴스 설정
+     */
+    setTileHolder(holder: TileHolder) {
+        this.tileHolder = holder;
     }
 }

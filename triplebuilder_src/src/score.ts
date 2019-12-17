@@ -43,24 +43,15 @@ export class ScoreManager {
 
         // 점수 테이블, 총 타일레벨은 10이지만 0레벨은 점수가 없으므로 9개만 세팅
         this.scoreTable = [];
-        // this.scoreTable.push(5);
-        // this.scoreTable.push(10);
-        // this.scoreTable.push(20);
-        // this.scoreTable.push(35);
-        // this.scoreTable.push(55);
-        // this.scoreTable.push(80);
-        // this.scoreTable.push(110);
-        // this.scoreTable.push(145);
-        // this.scoreTable.push(200);        
-        this.scoreTable.push(50);
-        this.scoreTable.push(100);
+        this.scoreTable.push(5);
+        this.scoreTable.push(10);
+        this.scoreTable.push(20);
+        this.scoreTable.push(35);
+        this.scoreTable.push(55);
+        this.scoreTable.push(80);
+        this.scoreTable.push(110);
+        this.scoreTable.push(145);
         this.scoreTable.push(200);
-        this.scoreTable.push(350);
-        this.scoreTable.push(550);
-        this.scoreTable.push(800);
-        this.scoreTable.push(1100);
-        this.scoreTable.push(1450);
-        this.scoreTable.push(2000);
 
         // 폰트 데이터를 로드하고 준비시킨다.
         const fontLoader = new FontLoader();

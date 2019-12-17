@@ -7,6 +7,7 @@ import { ScoreManager } from './score';
 import * as TWEEN from '@tweenjs/tween.js';
 import * as Font_Bold_Italic from './Open_Sans_Bold_Italic.json';
 import { SoundManager } from './soundManager';
+import { TileHolder } from './tileHolder';
 
 /**
  * 엔진 코어
@@ -28,6 +29,7 @@ export class Core {
     private board: Board;
     private gameLogic: GameLogic;
     private soundMgr: SoundManager;
+    private tileHolder: TileHolder;
     
 
     /**
@@ -108,7 +110,11 @@ export class Core {
             scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
             // 게임로직
             scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
-            
+            // 타일 홀딩
+            scope.tileHolder = new TileHolder(scope.scene, scope.camera, scope.control, scope.model);
+            scope.gameLogic.setTileHolder(scope.tileHolder);
+            scope.board.setTileHolder(scope.tileHolder);
+
             if( onReady ) {
                 onReady();
             }
@@ -138,6 +144,7 @@ export class Core {
 
         const deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.tileHolder.update(deltaTime);
         this.scoreMgr.update(deltaTime);
         this.board.update(deltaTime);
         this.control.update();

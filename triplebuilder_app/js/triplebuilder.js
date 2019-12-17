@@ -54058,6 +54058,7 @@ var Board = /** @class */ (function () {
         var sphere = new three_1.Sphere();
         bounding.getBoundingSphere(sphere);
         this.scoreMgr.sphere = sphere.clone();
+        this.tileHolder.boardSphere = sphere.clone();
         this.camControl.target = sphere.center;
         this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius);
         this.camControl.object.lookAt(sphere.center);
@@ -54346,6 +54347,12 @@ var Board = /** @class */ (function () {
             }
         }
     };
+    /**
+     * 타일홀더 인스턴스 설정
+     */
+    Board.prototype.setTileHolder = function (holder) {
+        this.tileHolder = holder;
+    };
     return Board;
 }());
 exports.Board = Board;
@@ -54372,6 +54379,7 @@ var score_1 = __webpack_require__(/*! ./score */ "./src/score.ts");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var Font_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
 var soundManager_1 = __webpack_require__(/*! ./soundManager */ "./src/soundManager.ts");
+var tileHolder_1 = __webpack_require__(/*! ./tileHolder */ "./src/tileHolder.ts");
 /**
  * 엔진 코어
  */
@@ -54444,6 +54452,10 @@ var Core = /** @class */ (function () {
             scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
             // 게임로직
             scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
+            // 타일 홀딩
+            scope.tileHolder = new tileHolder_1.TileHolder(scope.scene, scope.camera, scope.control, scope.model);
+            scope.gameLogic.setTileHolder(scope.tileHolder);
+            scope.board.setTileHolder(scope.tileHolder);
             if (onReady) {
                 onReady();
             }
@@ -54466,6 +54478,7 @@ var Core = /** @class */ (function () {
         requestAnimationFrame(this.render.bind(this));
         var deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.tileHolder.update(deltaTime);
         this.scoreMgr.update(deltaTime);
         this.board.update(deltaTime);
         this.control.update();
@@ -54608,7 +54621,14 @@ var GameLogic = /** @class */ (function () {
             // 포인터 다운 좌표와 업좌표사이 거리가 5.0픽셀 이하인경우 처리
             var currPointerUpPos = new three_1.Vector2(event.screenX, event.screenY);
             if (currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0) {
-                if (this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0) {
+                // 홀드 기능이 먼저 작동되었는지 체크
+                if (this.tileHolder.pickTest(this.rayCast)) {
+                    // 타일에 홀드할 타일레벨 설정
+                    var prevLevel = this.tileHolder.setHoldTile(this.cursor.userData['level']);
+                    // 새 커서 생성
+                    this.createCursor(prevLevel);
+                }
+                else if (this.cursor && this.cursor.userData['pickedTile'] && this.cursor.userData['pickedTile'].level === 0) {
                     var targetTile_1 = this.cursor.userData['pickedTile'];
                     // 타일의 레벨을 커서객체 레벨로 설정
                     targetTile_1.level = this.cursor.userData['level'];
@@ -54646,10 +54666,10 @@ var GameLogic = /** @class */ (function () {
     GameLogic.prototype.createCursor = function (level) {
         var _this = this;
         if (!level) {
-            level = 1; //this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+            level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1; //level = 1;//
         }
         var sourceObject = this.modelMgr.getModelByLevelNumber(level);
-        // 원본 객체를 돌며 Geometry를 취득한후 EdgesGeometry생성
+        // 원본 객체의 정보를 통해 새 객체 생성
         if (sourceObject) {
             this.disposeCursor();
             this.cursor = new three_1.Object3D();
@@ -54735,6 +54755,12 @@ var GameLogic = /** @class */ (function () {
                 }
             });
         }
+    };
+    /**
+     * 타일 홀더 인스턴스 설정
+     */
+    GameLogic.prototype.setTileHolder = function (holder) {
+        this.tileHolder = holder;
     };
     return GameLogic;
 }());
@@ -54860,24 +54886,15 @@ var ScoreManager = /** @class */ (function () {
         this.score = 0;
         // 점수 테이블, 총 타일레벨은 10이지만 0레벨은 점수가 없으므로 9개만 세팅
         this.scoreTable = [];
-        // this.scoreTable.push(5);
-        // this.scoreTable.push(10);
-        // this.scoreTable.push(20);
-        // this.scoreTable.push(35);
-        // this.scoreTable.push(55);
-        // this.scoreTable.push(80);
-        // this.scoreTable.push(110);
-        // this.scoreTable.push(145);
-        // this.scoreTable.push(200);        
-        this.scoreTable.push(50);
-        this.scoreTable.push(100);
+        this.scoreTable.push(5);
+        this.scoreTable.push(10);
+        this.scoreTable.push(20);
+        this.scoreTable.push(35);
+        this.scoreTable.push(55);
+        this.scoreTable.push(80);
+        this.scoreTable.push(110);
+        this.scoreTable.push(145);
         this.scoreTable.push(200);
-        this.scoreTable.push(350);
-        this.scoreTable.push(550);
-        this.scoreTable.push(800);
-        this.scoreTable.push(1100);
-        this.scoreTable.push(1450);
-        this.scoreTable.push(2000);
         // 폰트 데이터를 로드하고 준비시킨다.
         var fontLoader = new three_1.FontLoader();
         this.fontData = fontLoader.parse(FontData_Bold_Italic);
@@ -55227,6 +55244,162 @@ var SoundManager = /** @class */ (function () {
     return SoundManager;
 }());
 exports.SoundManager = SoundManager;
+
+
+/***/ }),
+
+/***/ "./src/tileHolder.ts":
+/*!***************************!*\
+  !*** ./src/tileHolder.ts ***!
+  \***************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var FontData_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
+/**
+ * 타일 홀딩 기능
+ */
+var TileHolder = /** @class */ (function () {
+    /**
+     * 생성자
+     * @param scene 씬 객체
+     * @param camera 카메라
+     * @param control 카메라 컨트롤러
+     */
+    function TileHolder(scene, camera, control, modelMgr) {
+        this.scene = scene;
+        this.camera = camera;
+        this.control = control;
+        this.modelMgr = modelMgr;
+        this.rootGroup = new three_1.Group();
+        this.scene.add(this.rootGroup);
+        // 폰트관련 초기화 처리
+        var fontLoader = new three_1.FontLoader();
+        this.fontData = fontLoader.parse(FontData_Bold_Italic);
+        // geometry 생성후 중점 이동
+        this.geometry = new three_1.TextBufferGeometry('Hold:', {
+            font: this.fontData,
+            size: 8,
+            height: 5
+        });
+        this.geometry.computeBoundingBox();
+        var size = new three_1.Vector3();
+        this.geometry.boundingBox.getSize(size);
+        this.geometry.translate(size.x * -0.5, size.y * -0.5, size.z * -0.5);
+        // 재질
+        this.material = new three_1.MeshPhongMaterial({ color: 0x00ff00 });
+        this.mesh = new three_1.Mesh(this.geometry, this.material);
+        this.rootGroup.add(this.mesh);
+        this.mesh.position.set(0, 0, 0);
+        // 타일 홀더용 루트
+        this.holderRoot = new three_1.Group();
+        this.rootGroup.add(this.holderRoot);
+        // 홀더 위치 설정
+        var textBounding = new three_1.Box3().setFromObject(this.mesh);
+        var textSize = new three_1.Vector3();
+        textBounding.getSize(textSize);
+        this.holderRoot.position.y -= 1;
+        this.holderRoot.position.x = textSize.x * 0.5 + 10;
+    }
+    /**
+     * 위치 업데이트
+     */
+    TileHolder.prototype.update = function (deltaTime) {
+        var camForward = new three_1.Vector3();
+        this.camera.getWorldDirection(camForward);
+        var target = this.control.target.clone();
+        target.addScaledVector(camForward, this.boardSphere.radius);
+        var plane = new three_1.Plane().setFromNormalAndCoplanarPoint(new three_1.Vector3(0, 1, 0), this.boardSphere.center);
+        var project = new three_1.Vector3();
+        plane.projectPoint(target, project);
+        var direction = new three_1.Vector3().subVectors(project, this.control.target);
+        direction.normalize();
+        var result = this.control.target.clone();
+        result.addScaledVector(direction, this.boardSphere.radius + 10);
+        result.y += 20;
+        this.rootGroup.position.copy(result);
+        this.rootGroup.lookAt(this.control.target);
+        if (this.holderObject) {
+            this.holderObject.rotateY(Math.PI * deltaTime * 0.1);
+        }
+    };
+    /**
+     * 홀드 텍스트와 픽킹 처리
+     */
+    TileHolder.prototype.pickTest = function (rayCast) {
+        var intersects = rayCast.intersectObjects(this.rootGroup.children, true);
+        if (intersects && intersects.length > 0) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    };
+    /**
+     * 타일 객체 홀드
+     * @param level 타일 레벨
+     * @returns 이전 타일 레벨
+     */
+    TileHolder.prototype.setHoldTile = function (level) {
+        var _this = this;
+        var prevHolderLevel = (this.holderObject) ? this.holderObject.userData['level'] : null;
+        // 새 홀더 객체
+        var sourceObject = this.modelMgr.getModelByLevelNumber(level);
+        if (sourceObject) {
+            // 이전에 생성되어 있던 홀더 객체 메모리 해제 처리
+            if (this.holderObject) {
+                this.disposeHolderObject();
+            }
+            this.holderObject = new three_1.Object3D();
+            sourceObject.traverse(function (child) {
+                if (child instanceof three_1.Mesh) {
+                    var cursorMaterial = null;
+                    if (child.material instanceof Array) {
+                        cursorMaterial = [];
+                        for (var m = 0; m < child.material.length; m++) {
+                            var matCursor = child.material[m].clone();
+                            cursorMaterial.push(matCursor);
+                        }
+                    }
+                    else {
+                        cursorMaterial = child.material.clone();
+                    }
+                    var mesh = new three_1.Mesh(child.geometry, cursorMaterial);
+                    _this.holderObject.add(mesh);
+                }
+            });
+            this.holderRoot.add(this.holderObject);
+            this.holderObject.userData['level'] = level; // 타일 레벨 저장
+        }
+        return prevHolderLevel;
+    };
+    /**
+     * 홀더 객체 메모리 해제
+     */
+    TileHolder.prototype.disposeHolderObject = function () {
+        this.holderRoot.remove(this.holderObject);
+        this.holderObject.traverse(function (child) {
+            if (child instanceof three_1.Mesh) {
+                child.geometry.dispose();
+                if (child.material instanceof Array) {
+                    for (var m = 0; m < child.material.length; m++) {
+                        child.material[m].dispose();
+                    }
+                }
+                else {
+                    child.material.dispose();
+                }
+            }
+        });
+        this.holderObject = null;
+    };
+    return TileHolder;
+}());
+exports.TileHolder = TileHolder;
 
 
 /***/ }),
