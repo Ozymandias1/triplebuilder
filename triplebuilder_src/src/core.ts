@@ -8,6 +8,7 @@ import * as TWEEN from '@tweenjs/tween.js';
 import * as Font_Bold_Italic from './Open_Sans_Bold_Italic.json';
 import { SoundManager } from './soundManager';
 import { TileHolder } from './tileHolder';
+import { GameStarter } from './gameStarter';
 
 /**
  * 엔진 코어
@@ -30,6 +31,7 @@ export class Core {
     private gameLogic: GameLogic;
     private soundMgr: SoundManager;
     private tileHolder: TileHolder;
+    private gameStarter: GameStarter;
     
 
     /**
@@ -95,6 +97,9 @@ export class Core {
         this.control.enablePan = false;
         this.control.minPolarAngle = Math.PI * 0.1;
         this.control.maxPolarAngle = Math.PI * 0.5;
+        
+        this.control.autoRotate = true;
+        this.control.enabled = false;
 
         // 창크기변경 이벤트 등록
         window.addEventListener('resize', this.onResize.bind(this), false);
@@ -114,6 +119,25 @@ export class Core {
             scope.tileHolder = new TileHolder(scope.scene, scope.camera, scope.control, scope.model);
             scope.gameLogic.setTileHolder(scope.tileHolder);
             scope.board.setTileHolder(scope.tileHolder);
+
+            scope.tileHolder.setVisible(false);
+            scope.scoreMgr.setVisible(false);
+
+            // 게임 스타터
+            scope.gameStarter = new GameStarter(scope.scene, scope.camera, scope.control, () => {
+
+                scope.control.autoRotate = false;
+                scope.control.enabled = true;
+
+                scope.tileHolder.setVisible(true);
+                scope.scoreMgr.setVisible(true);
+                scope.soundMgr.playSound('BGM');
+
+                scope.gameLogic.createCursor();
+                scope.gameLogic.enable();
+
+            });
+            scope.board.setGameStarter(scope.gameStarter);
 
             if( onReady ) {
                 onReady();
@@ -144,6 +168,7 @@ export class Core {
 
         const deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.gameStarter.update(deltaTime);
         this.tileHolder.update(deltaTime);
         this.scoreMgr.update(deltaTime);
         this.board.update(deltaTime);
@@ -170,21 +195,7 @@ export class Core {
         this.dispose();
 
         this.board.createMap(mapWidth, mapHeight);
-        this.gameLogic.createCursor();
+        //this.gameLogic.createCursor();
 
-    }
-
-    public Test() {
-
-        const loader = new FontLoader();
-        const font = loader.parse(Font_Bold_Italic);
-        const geometry = new TextBufferGeometry('Score: 1234567890', {
-            font: font,
-            size: 10,
-            height: 5
-        });
-        const material = new MeshPhongMaterial({ color: 0xff0000 });
-        const text = new Mesh(geometry, material);
-        this.scene.add(text);
     }
 }

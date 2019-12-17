@@ -21,6 +21,9 @@ export class GameLogic {
     private rayCast: Raycaster;
     private mousePos: Vector2;
     private mouseDownPos: Vector2;
+    private pointerDownBinder: any;
+    private pointerMoveBinder: any;
+    private pointerUpBinder: any;
 
     constructor(scene: Scene, camera: Camera, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager, soundMgr: SoundManager) {
 
@@ -35,9 +38,28 @@ export class GameLogic {
         this.rayCast = new Raycaster();
         this.mousePos = new Vector2();
         this.mouseDownPos = new Vector2();
-        window.addEventListener('pointerdown', this.onPointerDown.bind(this), false);
-        window.addEventListener('pointermove', this.onPointerMove.bind(this), false);
-        window.addEventListener('pointerup', this.onPointerUp.bind(this), false);
+
+        this.pointerDownBinder = this.onPointerDown.bind(this);
+        this.pointerMoveBinder = this.onPointerMove.bind(this);
+        this.pointerUpBinder = this.onPointerUp.bind(this);
+    }
+
+    /**
+     * 기능 활성화
+     */
+    enable() {
+        window.addEventListener('pointerdown', this.pointerDownBinder, false);
+        window.addEventListener('pointermove', this.pointerMoveBinder, false);
+        window.addEventListener('pointerup', this.pointerUpBinder, false);
+    }
+
+    /**
+     * 기능 비활성화
+     */
+    disable() {
+        window.removeEventListener('pointerdown', this.pointerDownBinder);
+        window.removeEventListener('pointermove', this.pointerMoveBinder);
+        window.removeEventListener('pointerup', this.pointerUpBinder);
     }
 
     /**

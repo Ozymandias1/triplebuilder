@@ -54059,6 +54059,7 @@ var Board = /** @class */ (function () {
         bounding.getBoundingSphere(sphere);
         this.scoreMgr.sphere = sphere.clone();
         this.tileHolder.boardSphere = sphere.clone();
+        this.gameStarter.boardSphere = sphere.clone();
         this.camControl.target = sphere.center;
         this.camControl.object.position.set(sphere.center.x, sphere.center.y + sphere.radius, sphere.center.z + sphere.radius);
         this.camControl.object.lookAt(sphere.center);
@@ -54353,6 +54354,12 @@ var Board = /** @class */ (function () {
     Board.prototype.setTileHolder = function (holder) {
         this.tileHolder = holder;
     };
+    /**
+     * 게임 스타터 인스턴스 설정
+     */
+    Board.prototype.setGameStarter = function (starter) {
+        this.gameStarter = starter;
+    };
     return Board;
 }());
 exports.Board = Board;
@@ -54377,9 +54384,9 @@ var model_1 = __webpack_require__(/*! ./model */ "./src/model.ts");
 var gamelogic_1 = __webpack_require__(/*! ./gamelogic */ "./src/gamelogic.ts");
 var score_1 = __webpack_require__(/*! ./score */ "./src/score.ts");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
-var Font_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
 var soundManager_1 = __webpack_require__(/*! ./soundManager */ "./src/soundManager.ts");
 var tileHolder_1 = __webpack_require__(/*! ./tileHolder */ "./src/tileHolder.ts");
+var gameStarter_1 = __webpack_require__(/*! ./gameStarter */ "./src/gameStarter.ts");
 /**
  * 엔진 코어
  */
@@ -54439,6 +54446,8 @@ var Core = /** @class */ (function () {
         this.control.enablePan = false;
         this.control.minPolarAngle = Math.PI * 0.1;
         this.control.maxPolarAngle = Math.PI * 0.5;
+        this.control.autoRotate = true;
+        this.control.enabled = false;
         // 창크기변경 이벤트 등록
         window.addEventListener('resize', this.onResize.bind(this), false);
         var scope = this;
@@ -54456,6 +54465,19 @@ var Core = /** @class */ (function () {
             scope.tileHolder = new tileHolder_1.TileHolder(scope.scene, scope.camera, scope.control, scope.model);
             scope.gameLogic.setTileHolder(scope.tileHolder);
             scope.board.setTileHolder(scope.tileHolder);
+            scope.tileHolder.setVisible(false);
+            scope.scoreMgr.setVisible(false);
+            // 게임 스타터
+            scope.gameStarter = new gameStarter_1.GameStarter(scope.scene, scope.camera, scope.control, function () {
+                scope.control.autoRotate = false;
+                scope.control.enabled = true;
+                scope.tileHolder.setVisible(true);
+                scope.scoreMgr.setVisible(true);
+                scope.soundMgr.playSound('BGM');
+                scope.gameLogic.createCursor();
+                scope.gameLogic.enable();
+            });
+            scope.board.setGameStarter(scope.gameStarter);
             if (onReady) {
                 onReady();
             }
@@ -54478,6 +54500,7 @@ var Core = /** @class */ (function () {
         requestAnimationFrame(this.render.bind(this));
         var deltaTime = this.clock.getDelta();
         TWEEN.default.update();
+        this.gameStarter.update(deltaTime);
         this.tileHolder.update(deltaTime);
         this.scoreMgr.update(deltaTime);
         this.board.update(deltaTime);
@@ -54499,19 +54522,7 @@ var Core = /** @class */ (function () {
     Core.prototype.createGame = function (mapWidth, mapHeight) {
         this.dispose();
         this.board.createMap(mapWidth, mapHeight);
-        this.gameLogic.createCursor();
-    };
-    Core.prototype.Test = function () {
-        var loader = new three_1.FontLoader();
-        var font = loader.parse(Font_Bold_Italic);
-        var geometry = new three_1.TextBufferGeometry('Score: 1234567890', {
-            font: font,
-            size: 10,
-            height: 5
-        });
-        var material = new three_1.MeshPhongMaterial({ color: 0xff0000 });
-        var text = new three_1.Mesh(geometry, material);
-        this.scene.add(text);
+        //this.gameLogic.createCursor();
     };
     return Core;
 }());
@@ -54532,6 +54543,139 @@ exports.Core = Core;
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(/*! ./core */ "./src/core.ts");
 exports.Core = core_1.Core;
+
+
+/***/ }),
+
+/***/ "./src/gameStarter.ts":
+/*!****************************!*\
+  !*** ./src/gameStarter.ts ***!
+  \****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var FontData_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
+/**
+ * 게임 시작 처리 클래스
+ */
+var GameStarter = /** @class */ (function () {
+    /**
+     * 생성자
+     */
+    function GameStarter(scene, camera, control, onStart) {
+        this.scene = scene;
+        this.camera = camera;
+        this.control = control;
+        this.onStart = onStart;
+        // 폰트관련 초기화 처리
+        var fontLoader = new three_1.FontLoader();
+        this.fontData = fontLoader.parse(FontData_Bold_Italic);
+        // 문자열 geometry 생성
+        var geometry = new three_1.TextBufferGeometry('Game Start', {
+            font: this.fontData,
+            size: 10,
+            height: 5
+        });
+        geometry.computeBoundingBox();
+        var size = new three_1.Vector3();
+        geometry.boundingBox.getSize(size);
+        geometry.translate(size.x * -0.5, size.y * -0.5, size.z * -0.5);
+        var material = new three_1.MeshPhongMaterial({ color: 0x00ff00 });
+        this.text = new three_1.Mesh(geometry, material);
+        this.scene.add(this.text);
+        // 픽킹시 가시화할 텍스트 밑줄 객체
+        var underLineGeometry = new three_1.BoxBufferGeometry(size.x, 2, 5);
+        this.underLine = new three_1.Mesh(underLineGeometry, material);
+        this.text.add(this.underLine);
+        this.underLine.position.set(0, (size.y * -0.5) - 1.5, 0);
+        this.underLine.visible = false;
+        // 픽킹요소 초기화
+        this.rayCast = new three_1.Raycaster();
+        this.mousePos = new three_1.Vector2();
+        this.mouseDownPos = new three_1.Vector2();
+        // 픽킹관련 포인터 이벤트 등록
+        this.pointerDownBinder = this.onPointerDown.bind(this);
+        this.pointerMoveBinder = this.onPointerMove.bind(this);
+        this.pointerUpBinder = this.onPointerUp.bind(this);
+        window.addEventListener('pointerdown', this.pointerDownBinder, false);
+        window.addEventListener('pointermove', this.pointerMoveBinder, false);
+        window.addEventListener('pointerup', this.pointerUpBinder, false);
+    }
+    /*** 업데이트
+     */
+    GameStarter.prototype.update = function (deltaTime) {
+        var camForward = new three_1.Vector3();
+        this.camera.getWorldDirection(camForward);
+        var target = this.control.target.clone();
+        target.addScaledVector(camForward, this.boardSphere.radius);
+        var plane = new three_1.Plane().setFromNormalAndCoplanarPoint(new three_1.Vector3(0, 1, 0), this.boardSphere.center);
+        var project = new three_1.Vector3();
+        plane.projectPoint(target, project);
+        var direction = new three_1.Vector3().subVectors(project, this.control.target);
+        direction.normalize();
+        var result = this.control.target.clone();
+        result.addScaledVector(direction, this.boardSphere.radius + 15);
+        //result.y += 20;
+        this.text.position.copy(result);
+        this.text.lookAt(this.control.target);
+    };
+    /**
+     * 포인터 다운 이벤트 처리
+     * @param event 마우스 이벤트
+     */
+    GameStarter.prototype.onPointerDown = function (event) {
+        if (event.button === 0) { // 좌클릭, 1-터치
+            this.mouseDownPos.x = event.screenX;
+            this.mouseDownPos.y = event.screenY;
+        }
+    };
+    /**
+     * 포인터 이동 이벤트 처리
+     */
+    GameStarter.prototype.onPointerMove = function (event) {
+        // ray 계산
+        this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+        this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        this.rayCast.setFromCamera(this.mousePos, this.camera);
+        // 보드판에 픽킹 처리를 한다.
+        var intersects = this.rayCast.intersectObjects([this.text]);
+        if (intersects && intersects.length > 0) {
+            this.underLine.visible = true;
+        }
+        else {
+            this.underLine.visible = false;
+        }
+    };
+    /**
+     * 포인터 업 이벤트
+     * @param event 포인터 이벤트
+     */
+    GameStarter.prototype.onPointerUp = function (event) {
+        if (event.button === 0) {
+            // 마우스 좌클릭의 경우 화면회전도 겸하므로
+            // 포인터 다운 좌표와 업좌표사이 거리가 5.0픽셀 이하인경우 처리
+            var currPointerUpPos = new three_1.Vector2(event.screenX, event.screenY);
+            if (currPointerUpPos.distanceTo(this.mouseDownPos) < 5.0) {
+                if (this.underLine.visible) {
+                    // 포인터 이벤트 제거
+                    window.removeEventListener('pointerdown', this.pointerDownBinder);
+                    window.removeEventListener('pointermove', this.pointerMoveBinder);
+                    window.removeEventListener('pointerup', this.pointerUpBinder);
+                    // 텍스트 숨기기
+                    this.text.visible = false;
+                    // 콜백 호출
+                    this.onStart();
+                }
+            }
+        }
+    };
+    return GameStarter;
+}());
+exports.GameStarter = GameStarter;
 
 
 /***/ }),
@@ -54560,10 +54704,26 @@ var GameLogic = /** @class */ (function () {
         this.rayCast = new three_1.Raycaster();
         this.mousePos = new three_1.Vector2();
         this.mouseDownPos = new three_1.Vector2();
-        window.addEventListener('pointerdown', this.onPointerDown.bind(this), false);
-        window.addEventListener('pointermove', this.onPointerMove.bind(this), false);
-        window.addEventListener('pointerup', this.onPointerUp.bind(this), false);
+        this.pointerDownBinder = this.onPointerDown.bind(this);
+        this.pointerMoveBinder = this.onPointerMove.bind(this);
+        this.pointerUpBinder = this.onPointerUp.bind(this);
     }
+    /**
+     * 기능 활성화
+     */
+    GameLogic.prototype.enable = function () {
+        window.addEventListener('pointerdown', this.pointerDownBinder, false);
+        window.addEventListener('pointermove', this.pointerMoveBinder, false);
+        window.addEventListener('pointerup', this.pointerUpBinder, false);
+    };
+    /**
+     * 기능 비활성화
+     */
+    GameLogic.prototype.disable = function () {
+        window.removeEventListener('pointerdown', this.pointerDownBinder);
+        window.removeEventListener('pointermove', this.pointerMoveBinder);
+        window.removeEventListener('pointerup', this.pointerUpBinder);
+    };
     /**
      * 포인터 다운 이벤트 처리
      * @param event 마우스 이벤트
@@ -55074,6 +55234,13 @@ var ScoreManager = /** @class */ (function () {
             }
         }
     };
+    /**
+     * 가시화 설정
+     * @param isVisible 가시화 여부
+     */
+    ScoreManager.prototype.setVisible = function (isVisible) {
+        this.resultScoreRoot.visible = isVisible;
+    };
     return ScoreManager;
 }());
 exports.ScoreManager = ScoreManager;
@@ -55396,6 +55563,13 @@ var TileHolder = /** @class */ (function () {
             }
         });
         this.holderObject = null;
+    };
+    /**
+     * 객체 가시화 설정
+     * @param isVisible 가시화 여부
+     */
+    TileHolder.prototype.setVisible = function (isVisible) {
+        this.rootGroup.visible = isVisible;
     };
     return TileHolder;
 }());

@@ -278,4 +278,12 @@ export class ScoreManager {
             }
         }
     }
+
+    /**
+     * 가시화 설정
+     * @param isVisible 가시화 여부
+     */
+    setVisible(isVisible: boolean) {
+        this.resultScoreRoot.visible = isVisible;
+    }
 }

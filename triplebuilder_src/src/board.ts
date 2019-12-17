@@ -5,6 +5,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ScoreManager } from "./score";
 import { SoundManager } from "./soundManager";
 import { TileHolder } from "./tileHolder";
+import { GameStarter } from "./gameStarter";
 
 export class Tile {
     public object: Mesh;
@@ -59,6 +60,7 @@ export class Board {
     public isTileFacingToCamera: boolean;
     private tileFacingAngleArray: TileFacingAngleData[];
     private prevFacingIndex: number;
+    private gameStarter: GameStarter;
 
     /**
      * 생성자
@@ -223,6 +225,7 @@ export class Board {
         bounding.getBoundingSphere(sphere);
         this.scoreMgr.sphere = sphere.clone();
         this.tileHolder.boardSphere = sphere.clone();
+        this.gameStarter.boardSphere = sphere.clone();
 
         this.camControl.target = sphere.center;
         this.camControl.object.position.set(
@@ -554,5 +557,12 @@ export class Board {
      */
     setTileHolder(holder: TileHolder) {
         this.tileHolder = holder;
+    }
+
+    /**
+     * 게임 스타터 인스턴스 설정
+     */
+    setGameStarter(starter: GameStarter) {
+        this.gameStarter = starter;
     }
 }
