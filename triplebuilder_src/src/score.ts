@@ -30,6 +30,11 @@ export class ScoreManager {
     private resultScoreRoot: Group;
     private resultScoreSharedMaterial: MeshPhongMaterial;
     private resultScoreInterval: number;
+    
+    private highScoreRoot: Group;
+    private highScore: number;
+    private highScoreGeometries: Record<string, TextBufferGeometry>;
+    private highScoreInterval: number;
 
     /**
      * 생성자
@@ -40,6 +45,16 @@ export class ScoreManager {
         this.camera = camera;
         this.control = control;
         this.score = 0;
+
+        // 저장되어 있는 하이스코어를 가져옴
+        const storageHighScore = localStorage.getItem('highscore');
+        if( !storageHighScore ) { // 하이스코어가 없다면 처음실행한것이므로 기본값 설정
+
+            localStorage.setItem('highscore', '0');
+            this.highScore = 0;
+        } else {
+            this.highScore = parseInt(storageHighScore);
+        }
 
         // 점수 테이블, 총 타일레벨은 10이지만 0레벨은 점수가 없으므로 9개만 세팅
         this.scoreTable = [];
@@ -67,7 +82,7 @@ export class ScoreManager {
             const geometry = new TextBufferGeometry(text, {
                 font: this.fontData,
                 size: 10,
-                height: 5
+                height: 2
             });
 
             // geometry의 바운딩을 계산하여 중점으로 이동
@@ -121,8 +136,36 @@ export class ScoreManager {
         this.resultScoreSharedMaterial = new MeshPhongMaterial({ color: 0x0000ff });
         this.resultScoreRoot = new Group();
         this.scene.add(this.resultScoreRoot);
+        this.updateScoreMesh();
 
-        this.updateScoreMesh();        
+        // 하이스코어
+        this.highScoreRoot = new Group();
+        this.scene.add(this.highScoreRoot);
+
+        this.highScoreInterval = 0;
+        const highScoreTextList = ['HighScore:', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        this.highScoreGeometries = {};
+        highScoreTextList.forEach( (text, i) => {
+            const geometry = new TextBufferGeometry(text, {
+                font: this.fontData,
+                size: 3,
+                height: 2
+            });
+
+            // geometry의 바운딩을 계산하여 중점으로 이동
+            geometry.computeBoundingBox();
+            const size = new Vector3();
+            geometry.boundingBox.getSize(size);
+            geometry.translate( size.x * -0.5, size.y * -0.5, size.z * -0.5 );
+
+            this.highScoreGeometries[text] = geometry;
+            if( 0 < i ) { // 문자 간격을 제일 큰 문자를 기준으로 처리
+                this.highScoreInterval = Math.max( this.highScoreInterval, size.x );
+            }
+        });
+        this.updateHighScoreMesh();
+
+        
     }
 
     /**
@@ -132,6 +175,16 @@ export class ScoreManager {
 
         this.score = 0;
 
+    }
+
+    /**
+     * 지정된 숫자로 점수 설정
+     * @param score 점수
+     */
+    setScore(score: number) {
+        
+        this.score = score;
+        this.updateScoreMesh();
     }
 
     /**
@@ -179,6 +232,11 @@ export class ScoreManager {
             this.popupObjList.push(popup);
 
             this.updateScoreMesh();
+            if( this.score >= this.highScore ) {
+                this.highScore = this.score;
+                this.saveHighScore();
+                this.updateHighScoreMesh();
+            }
         }
     }
 
@@ -243,6 +301,66 @@ export class ScoreManager {
     }
 
     /**
+     * 최대점수 가시화 객체를 업데이트 한다.
+     */
+    updateHighScoreMesh() {
+
+        // 이전 자식 객체 제거
+        const childCount = this.highScoreRoot.children.length;
+        for(let i = 0; i < childCount; i++) {
+            const child = this.highScoreRoot.children[0];
+            this.highScoreRoot.remove(child);
+        }
+
+        // Highscore 객체
+        let mesh = new Mesh( this.highScoreGeometries['HighScore:'], this.resultScoreSharedMaterial);
+        this.highScoreRoot.add(mesh);
+        mesh.position.set(0, 0, 0);
+
+        // highscore 바운딩 계산
+        const bBox = this.highScoreGeometries['HighScore:'].boundingBox.clone();
+        const scoreCenter = new Vector3(), scoreSize = new Vector3();
+        bBox.getCenter(scoreCenter);
+        bBox.getSize(scoreSize);
+
+        // 시작지점 공백용사이즈를 '0'으로 계산
+        const whiteSpaceSize = new Vector3();
+        this.highScoreGeometries['0'].boundingBox.getSize(whiteSpaceSize);
+
+        // 점수 문자화를 하고 0번쨰부터 n번째까지 가시화 객체로 생성한다.
+        const strScore = this.highScore.toString();
+        for(let i = 0; i < strScore.length; i++) {
+
+            // 생성
+            mesh = new Mesh(this.highScoreGeometries[strScore[i]], this.resultScoreSharedMaterial);
+            this.highScoreRoot.add(mesh);
+
+            // 위치 설정
+            mesh.position.x = scoreCenter.x + (scoreSize.x * 0.5) + whiteSpaceSize.x + (this.highScoreInterval * i);
+            mesh.position.y -= 1;
+            bBox.expandByObject(mesh);
+        }
+
+        // 위치 조정
+        let minX = Number.MAX_VALUE, maxX = Number.MIN_VALUE, halfX = null;
+        for(let i = 1; i < this.highScoreRoot.children.length; i++) {
+            const child = <Mesh>this.highScoreRoot.children[i];
+            
+            const currBox = child.geometry.boundingBox.clone();
+            currBox.translate(child.position);
+            
+            minX = Math.min(minX, currBox.min.x);
+            maxX = Math.max(maxX, currBox.max.x);
+        }
+        halfX = (maxX - minX) * 0.5;
+        for(let i = 0; i < this.highScoreRoot.children.length; i++) {
+            const child = this.highScoreRoot.children[i];
+            child.translateX(-halfX);
+        }
+
+    }
+
+    /**
      * 업데이트
      */
     update(deltaTime: number) {
@@ -267,6 +385,10 @@ export class ScoreManager {
 
             this.resultScoreRoot.position.copy(result);
             this.resultScoreRoot.lookAt(this.control.target);
+
+            this.highScoreRoot.position.copy(result);
+            this.highScoreRoot.position.y -= 8;
+            this.highScoreRoot.lookAt(this.control.target);
         }
 
         // 팝업 객체리스트를 역순으로 순회하며 애니메이션이 완료된 객체는 제거한다.
@@ -285,5 +407,15 @@ export class ScoreManager {
      */
     setVisible(isVisible: boolean) {
         this.resultScoreRoot.visible = isVisible;
+        this.highScoreRoot.visible = isVisible;
+    }
+    
+    /**
+     * 하이스코어 저장
+     */
+    saveHighScore() {
+        
+        localStorage.setItem('highscore', this.highScore.toString());
+
     }
 }

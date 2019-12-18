@@ -21,6 +21,7 @@ export class TileHolder {
     private rootGroup: Group;
     private holderRoot: Group;
     private holderObject: Object3D;
+    private underLine: Mesh;
     
     public boardSphere: Sphere;
 
@@ -47,7 +48,7 @@ export class TileHolder {
         this.geometry = new TextBufferGeometry('Hold:', {
             font: this.fontData,
             size: 8,
-            height: 5
+            height: 2
         });
         this.geometry.computeBoundingBox();
         const size = new Vector3();
@@ -71,6 +72,13 @@ export class TileHolder {
         textBounding.getSize(textSize);
         this.holderRoot.position.y -= 1;
         this.holderRoot.position.x = textSize.x * 0.5 + 10;
+
+        // 언더라인
+        const underLineGeometry = new BoxBufferGeometry(size.x, 2, 5);
+        this.underLine = new Mesh(underLineGeometry, this.material);
+        this.rootGroup.add(this.underLine);
+        this.underLine.position.set(0, (size.y * -0.5) - 1.5, 0);
+        this.underLine.visible = false;
     }
 
     /**
@@ -110,8 +118,10 @@ export class TileHolder {
 
         const intersects = rayCast.intersectObjects(this.rootGroup.children, true);
         if( intersects && intersects.length > 0 ) {
+            this.underLine.visible = true;
             return true;
         } else {
+            this.underLine.visible = false;
             return false;
         }
     }
@@ -167,26 +177,28 @@ export class TileHolder {
      */
     disposeHolderObject() {
 
-        this.holderRoot.remove(this.holderObject);
-
-        this.holderObject.traverse((child)=>{
-
-            if( child instanceof Mesh ) {
-
-                child.geometry.dispose();
-                if( child.material instanceof Array ) {
-                    for(let m = 0; m < child.material.length; m++) {
-                        child.material[m].dispose();
+        if( this.holderObject ) {
+            this.holderRoot.remove(this.holderObject);
+    
+            this.holderObject.traverse((child)=>{
+    
+                if( child instanceof Mesh ) {
+    
+                    child.geometry.dispose();
+                    if( child.material instanceof Array ) {
+                        for(let m = 0; m < child.material.length; m++) {
+                            child.material[m].dispose();
+                        }
+                    } else {
+                        child.material.dispose();
                     }
-                } else {
-                    child.material.dispose();
+    
                 }
-
-            }
-
-        });
-
-        this.holderObject = null;
+    
+            });
+    
+            this.holderObject = null;
+        }
 
     }
 

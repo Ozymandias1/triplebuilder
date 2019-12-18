@@ -5,11 +5,13 @@ import * as TWEEN from '@tweenjs/tween.js';
 import { ScoreManager } from "./score";
 import { SoundManager } from "./soundManager";
 import { TileHolder } from "./tileHolder";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 export class GameLogic {
 
     private scene: Scene;
     private camera: Camera;
+    private control: OrbitControls;
     private board: Board;
     private modelMgr: ModelManager;
     private scoreMgr: ScoreManager;
@@ -24,11 +26,14 @@ export class GameLogic {
     private pointerDownBinder: any;
     private pointerMoveBinder: any;
     private pointerUpBinder: any;
+    
+    private restartPointerUpBinder: any;
 
-    constructor(scene: Scene, camera: Camera, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager, soundMgr: SoundManager) {
+    constructor(scene: Scene, camera: Camera, control: OrbitControls, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager, soundMgr: SoundManager) {
 
         this.scene = scene;
         this.camera = camera;
+        this.control = control;
         this.board = board;
         this.modelMgr = modelMgr;
         this.scoreMgr = scoreMgr;
@@ -42,6 +47,7 @@ export class GameLogic {
         this.pointerDownBinder = this.onPointerDown.bind(this);
         this.pointerMoveBinder = this.onPointerMove.bind(this);
         this.pointerUpBinder = this.onPointerUp.bind(this);
+        this.restartPointerUpBinder = this.restartPointerUp.bind(this);
     }
 
     /**
@@ -112,6 +118,8 @@ export class GameLogic {
             }
         }
 
+        // 홀더 마우스 오버 처리
+        this.tileHolder.pickTest(this.rayCast);
     }
 
     /**
@@ -162,6 +170,9 @@ export class GameLogic {
                         this.board.checkTriple(targetTile, 1);
                         this.createCursor();
                         this.onPointerMove(event);
+
+                        // 게임오버 체크
+                        this.checkGameOver();
                     })
                     .start();
 
@@ -215,7 +226,6 @@ export class GameLogic {
             this.scene.add(this.cursor);
             this.cursor.userData['sourceObject'] = sourceObject;
             this.cursor.userData['level'] = level;
-
         }
     }
 
@@ -285,5 +295,50 @@ export class GameLogic {
      */
     setTileHolder(holder: TileHolder) {
         this.tileHolder = holder;
+    }
+
+    /**
+     * 게임오버 체크
+     */
+    checkGameOver() {
+        
+        const zeroCount = this.board.getTileCountByLevel(0);
+        if( zeroCount === 0 ) {
+            
+            this.control.autoRotate = true;
+            this.control.enabled = false;
+
+            // 홀드 텍스트 숨기기
+            this.tileHolder.setVisible(false);
+
+            // 하이스코어 업데이트
+            this.scoreMgr.saveHighScore();
+
+            window.addEventListener('pointerup', this.restartPointerUpBinder, false);
+        }
+    }
+
+    /**
+     * 재시작관련 포인터 처리
+     */
+    restartPointerUp(event: PointerEvent) {
+
+        if( confirm('Restart Game?') ) {
+
+            window.removeEventListener('pointerup', this.restartPointerUpBinder);
+
+            this.control.autoRotate = false;
+            this.control.enabled = true;
+
+            this.tileHolder.disposeHolderObject();
+            this.tileHolder.setVisible(true);
+
+            this.scoreMgr.setScore(0);
+
+            // 보드판 초기화
+            this.board.createMap(this.board.mapWidth, this.board.mapHeight);
+            this.createCursor();
+
+        }
     }
 }

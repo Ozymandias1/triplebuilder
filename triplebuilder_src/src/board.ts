@@ -565,4 +565,24 @@ export class Board {
     setGameStarter(starter: GameStarter) {
         this.gameStarter = starter;
     }
+
+    /**
+     * 지정된 레벨에 해당하는 타일 개수 반환
+     * @param level 타일레벨
+     */
+    getTileCountByLevel(level: number): number {
+        
+        let count = 0;
+        for(let w = 0; w < this.mapWidth; w++) {
+            for(let h = 0; h < this.mapHeight; h++) {
+
+                const tile = this.map[w][h];
+                if( tile.level === level ) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
 }

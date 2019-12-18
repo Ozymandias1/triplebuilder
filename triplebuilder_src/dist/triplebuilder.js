@@ -54360,6 +54360,22 @@ var Board = /** @class */ (function () {
     Board.prototype.setGameStarter = function (starter) {
         this.gameStarter = starter;
     };
+    /**
+     * 지정된 레벨에 해당하는 타일 개수 반환
+     * @param level 타일레벨
+     */
+    Board.prototype.getTileCountByLevel = function (level) {
+        var count = 0;
+        for (var w = 0; w < this.mapWidth; w++) {
+            for (var h = 0; h < this.mapHeight; h++) {
+                var tile = this.map[w][h];
+                if (tile.level === level) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    };
     return Board;
 }());
 exports.Board = Board;
@@ -54460,7 +54476,7 @@ var Core = /** @class */ (function () {
             // 게임판 인스턴스
             scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
             // 게임로직
-            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
+            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.control, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
             // 타일 홀딩
             scope.tileHolder = new tileHolder_1.TileHolder(scope.scene, scope.camera, scope.control, scope.model);
             scope.gameLogic.setTileHolder(scope.tileHolder);
@@ -54693,9 +54709,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var GameLogic = /** @class */ (function () {
-    function GameLogic(scene, camera, board, modelMgr, scoreMgr, soundMgr) {
+    function GameLogic(scene, camera, control, board, modelMgr, scoreMgr, soundMgr) {
         this.scene = scene;
         this.camera = camera;
+        this.control = control;
         this.board = board;
         this.modelMgr = modelMgr;
         this.scoreMgr = scoreMgr;
@@ -54707,6 +54724,7 @@ var GameLogic = /** @class */ (function () {
         this.pointerDownBinder = this.onPointerDown.bind(this);
         this.pointerMoveBinder = this.onPointerMove.bind(this);
         this.pointerUpBinder = this.onPointerUp.bind(this);
+        this.restartPointerUpBinder = this.restartPointerUp.bind(this);
     }
     /**
      * 기능 활성화
@@ -54769,6 +54787,8 @@ var GameLogic = /** @class */ (function () {
                 this.scene.remove(this.cursor);
             }
         }
+        // 홀더 마우스 오버 처리
+        this.tileHolder.pickTest(this.rayCast);
     };
     /**
      * 포인터 업 이벤트
@@ -54812,6 +54832,8 @@ var GameLogic = /** @class */ (function () {
                         _this.board.checkTriple(targetTile_1, 1);
                         _this.createCursor();
                         _this.onPointerMove(event);
+                        // 게임오버 체크
+                        _this.checkGameOver();
                     })
                         .start();
                     // 사운드재생
@@ -54921,6 +54943,37 @@ var GameLogic = /** @class */ (function () {
      */
     GameLogic.prototype.setTileHolder = function (holder) {
         this.tileHolder = holder;
+    };
+    /**
+     * 게임오버 체크
+     */
+    GameLogic.prototype.checkGameOver = function () {
+        var zeroCount = this.board.getTileCountByLevel(0);
+        if (zeroCount === 0) {
+            this.control.autoRotate = true;
+            this.control.enabled = false;
+            // 홀드 텍스트 숨기기
+            this.tileHolder.setVisible(false);
+            // 하이스코어 업데이트
+            this.scoreMgr.saveHighScore();
+            window.addEventListener('pointerup', this.restartPointerUpBinder, false);
+        }
+    };
+    /**
+     * 재시작관련 포인터 처리
+     */
+    GameLogic.prototype.restartPointerUp = function (event) {
+        if (confirm('Restart Game?')) {
+            window.removeEventListener('pointerup', this.restartPointerUpBinder);
+            this.control.autoRotate = false;
+            this.control.enabled = true;
+            this.tileHolder.disposeHolderObject();
+            this.tileHolder.setVisible(true);
+            this.scoreMgr.setScore(0);
+            // 보드판 초기화
+            this.board.createMap(this.board.mapWidth, this.board.mapHeight);
+            this.createCursor();
+        }
     };
     return GameLogic;
 }());
@@ -55044,6 +55097,15 @@ var ScoreManager = /** @class */ (function () {
         this.camera = camera;
         this.control = control;
         this.score = 0;
+        // 저장되어 있는 하이스코어를 가져옴
+        var storageHighScore = localStorage.getItem('highscore');
+        if (!storageHighScore) { // 하이스코어가 없다면 처음실행한것이므로 기본값 설정
+            localStorage.setItem('highscore', '0');
+            this.highScore = 0;
+        }
+        else {
+            this.highScore = parseInt(storageHighScore);
+        }
         // 점수 테이블, 총 타일레벨은 10이지만 0레벨은 점수가 없으므로 9개만 세팅
         this.scoreTable = [];
         this.scoreTable.push(5);
@@ -55068,7 +55130,7 @@ var ScoreManager = /** @class */ (function () {
             var geometry = new three_1.TextBufferGeometry(text, {
                 font: _this.fontData,
                 size: 10,
-                height: 5
+                height: 2
             });
             // geometry의 바운딩을 계산하여 중점으로 이동
             geometry.computeBoundingBox();
@@ -55113,12 +55175,43 @@ var ScoreManager = /** @class */ (function () {
         this.resultScoreRoot = new three_1.Group();
         this.scene.add(this.resultScoreRoot);
         this.updateScoreMesh();
+        // 하이스코어
+        this.highScoreRoot = new three_1.Group();
+        this.scene.add(this.highScoreRoot);
+        this.highScoreInterval = 0;
+        var highScoreTextList = ['HighScore:', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        this.highScoreGeometries = {};
+        highScoreTextList.forEach(function (text, i) {
+            var geometry = new three_1.TextBufferGeometry(text, {
+                font: _this.fontData,
+                size: 3,
+                height: 2
+            });
+            // geometry의 바운딩을 계산하여 중점으로 이동
+            geometry.computeBoundingBox();
+            var size = new three_1.Vector3();
+            geometry.boundingBox.getSize(size);
+            geometry.translate(size.x * -0.5, size.y * -0.5, size.z * -0.5);
+            _this.highScoreGeometries[text] = geometry;
+            if (0 < i) { // 문자 간격을 제일 큰 문자를 기준으로 처리
+                _this.highScoreInterval = Math.max(_this.highScoreInterval, size.x);
+            }
+        });
+        this.updateHighScoreMesh();
     }
     /**
      * 점수 관련 초기화
      */
     ScoreManager.prototype.reset = function () {
         this.score = 0;
+    };
+    /**
+     * 지정된 숫자로 점수 설정
+     * @param score 점수
+     */
+    ScoreManager.prototype.setScore = function (score) {
+        this.score = score;
+        this.updateScoreMesh();
     };
     /**
      * 타일레벨로 점수를 추가한다.
@@ -55156,6 +55249,11 @@ var ScoreManager = /** @class */ (function () {
             var popup = new scorePopup_1.ScorePopup(this.scene, geometryArray, this.sharedPopupMaterial, spawnLocation);
             this.popupObjList.push(popup);
             this.updateScoreMesh();
+            if (this.score >= this.highScore) {
+                this.highScore = this.score;
+                this.saveHighScore();
+                this.updateHighScoreMesh();
+            }
         }
     };
     /**
@@ -55206,6 +55304,54 @@ var ScoreManager = /** @class */ (function () {
         }
     };
     /**
+     * 최대점수 가시화 객체를 업데이트 한다.
+     */
+    ScoreManager.prototype.updateHighScoreMesh = function () {
+        // 이전 자식 객체 제거
+        var childCount = this.highScoreRoot.children.length;
+        for (var i = 0; i < childCount; i++) {
+            var child = this.highScoreRoot.children[0];
+            this.highScoreRoot.remove(child);
+        }
+        // Highscore 객체
+        var mesh = new three_1.Mesh(this.highScoreGeometries['HighScore:'], this.resultScoreSharedMaterial);
+        this.highScoreRoot.add(mesh);
+        mesh.position.set(0, 0, 0);
+        // highscore 바운딩 계산
+        var bBox = this.highScoreGeometries['HighScore:'].boundingBox.clone();
+        var scoreCenter = new three_1.Vector3(), scoreSize = new three_1.Vector3();
+        bBox.getCenter(scoreCenter);
+        bBox.getSize(scoreSize);
+        // 시작지점 공백용사이즈를 '0'으로 계산
+        var whiteSpaceSize = new three_1.Vector3();
+        this.highScoreGeometries['0'].boundingBox.getSize(whiteSpaceSize);
+        // 점수 문자화를 하고 0번쨰부터 n번째까지 가시화 객체로 생성한다.
+        var strScore = this.highScore.toString();
+        for (var i = 0; i < strScore.length; i++) {
+            // 생성
+            mesh = new three_1.Mesh(this.highScoreGeometries[strScore[i]], this.resultScoreSharedMaterial);
+            this.highScoreRoot.add(mesh);
+            // 위치 설정
+            mesh.position.x = scoreCenter.x + (scoreSize.x * 0.5) + whiteSpaceSize.x + (this.highScoreInterval * i);
+            mesh.position.y -= 1;
+            bBox.expandByObject(mesh);
+        }
+        // 위치 조정
+        var minX = Number.MAX_VALUE, maxX = Number.MIN_VALUE, halfX = null;
+        for (var i = 1; i < this.highScoreRoot.children.length; i++) {
+            var child = this.highScoreRoot.children[i];
+            var currBox = child.geometry.boundingBox.clone();
+            currBox.translate(child.position);
+            minX = Math.min(minX, currBox.min.x);
+            maxX = Math.max(maxX, currBox.max.x);
+        }
+        halfX = (maxX - minX) * 0.5;
+        for (var i = 0; i < this.highScoreRoot.children.length; i++) {
+            var child = this.highScoreRoot.children[i];
+            child.translateX(-halfX);
+        }
+    };
+    /**
      * 업데이트
      */
     ScoreManager.prototype.update = function (deltaTime) {
@@ -55224,6 +55370,9 @@ var ScoreManager = /** @class */ (function () {
             result.y += 10;
             this.resultScoreRoot.position.copy(result);
             this.resultScoreRoot.lookAt(this.control.target);
+            this.highScoreRoot.position.copy(result);
+            this.highScoreRoot.position.y -= 8;
+            this.highScoreRoot.lookAt(this.control.target);
         }
         // 팝업 객체리스트를 역순으로 순회하며 애니메이션이 완료된 객체는 제거한다.
         var popupObjCount = this.popupObjList.length;
@@ -55240,6 +55389,13 @@ var ScoreManager = /** @class */ (function () {
      */
     ScoreManager.prototype.setVisible = function (isVisible) {
         this.resultScoreRoot.visible = isVisible;
+        this.highScoreRoot.visible = isVisible;
+    };
+    /**
+     * 하이스코어 저장
+     */
+    ScoreManager.prototype.saveHighScore = function () {
+        localStorage.setItem('highscore', this.highScore.toString());
     };
     return ScoreManager;
 }());
@@ -55451,7 +55607,7 @@ var TileHolder = /** @class */ (function () {
         this.geometry = new three_1.TextBufferGeometry('Hold:', {
             font: this.fontData,
             size: 8,
-            height: 5
+            height: 2
         });
         this.geometry.computeBoundingBox();
         var size = new three_1.Vector3();
@@ -55471,6 +55627,12 @@ var TileHolder = /** @class */ (function () {
         textBounding.getSize(textSize);
         this.holderRoot.position.y -= 1;
         this.holderRoot.position.x = textSize.x * 0.5 + 10;
+        // 언더라인
+        var underLineGeometry = new three_1.BoxBufferGeometry(size.x, 2, 5);
+        this.underLine = new three_1.Mesh(underLineGeometry, this.material);
+        this.rootGroup.add(this.underLine);
+        this.underLine.position.set(0, (size.y * -0.5) - 1.5, 0);
+        this.underLine.visible = false;
     }
     /**
      * 위치 업데이트
@@ -55500,9 +55662,11 @@ var TileHolder = /** @class */ (function () {
     TileHolder.prototype.pickTest = function (rayCast) {
         var intersects = rayCast.intersectObjects(this.rootGroup.children, true);
         if (intersects && intersects.length > 0) {
+            this.underLine.visible = true;
             return true;
         }
         else {
+            this.underLine.visible = false;
             return false;
         }
     };
@@ -55548,21 +55712,23 @@ var TileHolder = /** @class */ (function () {
      * 홀더 객체 메모리 해제
      */
     TileHolder.prototype.disposeHolderObject = function () {
-        this.holderRoot.remove(this.holderObject);
-        this.holderObject.traverse(function (child) {
-            if (child instanceof three_1.Mesh) {
-                child.geometry.dispose();
-                if (child.material instanceof Array) {
-                    for (var m = 0; m < child.material.length; m++) {
-                        child.material[m].dispose();
+        if (this.holderObject) {
+            this.holderRoot.remove(this.holderObject);
+            this.holderObject.traverse(function (child) {
+                if (child instanceof three_1.Mesh) {
+                    child.geometry.dispose();
+                    if (child.material instanceof Array) {
+                        for (var m = 0; m < child.material.length; m++) {
+                            child.material[m].dispose();
+                        }
+                    }
+                    else {
+                        child.material.dispose();
                     }
                 }
-                else {
-                    child.material.dispose();
-                }
-            }
-        });
-        this.holderObject = null;
+            });
+            this.holderObject = null;
+        }
     };
     /**
      * 객체 가시화 설정

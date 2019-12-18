@@ -114,7 +114,7 @@ export class Core {
             // 게임판 인스턴스
             scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
             // 게임로직
-            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
+            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.control, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
             // 타일 홀딩
             scope.tileHolder = new TileHolder(scope.scene, scope.camera, scope.control, scope.model);
             scope.gameLogic.setTileHolder(scope.tileHolder);
