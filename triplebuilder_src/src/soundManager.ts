@@ -42,7 +42,7 @@ export class SoundManager {
             const sound = new Audio(scope.listener);
             sound.setBuffer(buffer);
             sound.setLoop(false);
-            sound.setVolume(0.25);
+            sound.setVolume(0.1);
 
             scope.sounds['CreateBuilding'] = sound;
 
@@ -55,7 +55,7 @@ export class SoundManager {
             const sound = new Audio(scope.listener);
             sound.setBuffer(buffer);
             sound.setLoop(false);
-            sound.setVolume(0.25);
+            sound.setVolume(0.1);
             
             scope.sounds['Score'] = sound;
 

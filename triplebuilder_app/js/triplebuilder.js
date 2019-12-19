@@ -55535,7 +55535,7 @@ var SoundManager = /** @class */ (function () {
             var sound = new three_1.Audio(scope.listener);
             sound.setBuffer(buffer);
             sound.setLoop(false);
-            sound.setVolume(0.25);
+            sound.setVolume(0.1);
             scope.sounds['CreateBuilding'] = sound;
         }, null, function (err) {
             console.error(err);
@@ -55545,7 +55545,7 @@ var SoundManager = /** @class */ (function () {
             var sound = new three_1.Audio(scope.listener);
             sound.setBuffer(buffer);
             sound.setLoop(false);
-            sound.setVolume(0.25);
+            sound.setVolume(0.1);
             scope.sounds['Score'] = sound;
         }, null, function (err) {
             console.error(err);
