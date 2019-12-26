@@ -53919,13 +53919,14 @@ var Board = /** @class */ (function () {
     /**
      * 생성자
      */
-    function Board(scene, modelMgr, camera, camControl, scoreMgr, soundMgr) {
+    function Board(scene, modelMgr, camera, camControl, scoreMgr, soundMgr, gameTimer) {
         this.scene = scene;
         this.modelMgr = modelMgr;
         this.camera = camera;
         this.camControl = camControl;
         this.scoreMgr = scoreMgr;
         this.soundMgr = soundMgr;
+        this.gameTimer = gameTimer;
         this.tileSize = 10;
         this.pickPlates = [];
         this.floorPlates = [];
@@ -54007,12 +54008,33 @@ var Board = /** @class */ (function () {
         this.dispose();
         this.mapWidth = width;
         this.mapHeight = height;
+        // 랜덤 맵타일 레벨당 개수
+        // 5, 3, 1, 1, 1, 1, 1, 1, 1
+        var levelStorage = [9, 8, 7, 6, 5, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1];
+        var levelStorageTile = [];
+        var levelMap = [];
+        for (var w = 0; w < this.mapWidth; w++) {
+            for (var h = 0; h < this.mapHeight; h++) {
+                levelMap.push({ w: w, h: h });
+            }
+        }
+        for (var l = 0; l < levelStorage.length; l++) {
+            var level = levelStorage[l];
+            var index = three_1.Math.randInt(0, levelMap.length - 1);
+            levelStorageTile.push({
+                w: levelMap[index].w,
+                h: levelMap[index].h,
+                level: level
+            });
+            levelMap.splice(index, 1);
+        }
         // 가로세로 개수만큼 초기화
         this.map = [];
         for (var w = 0; w < width; w++) {
             this.map[w] = [];
             for (var h = 0; h < height; h++) {
-                this.map[w][h] = new Tile(w, h, 0);
+                var level = this.findMatchedLevel(w, h, levelStorageTile);
+                this.map[w][h] = new Tile(w, h, level);
                 // 바닥판생성, 0레벨 판으로 깔린다.
                 var model = this.modelMgr.getModelByLevelNumber(0);
                 model.position.x = w * this.tileSize;
@@ -54034,18 +54056,10 @@ var Board = /** @class */ (function () {
                 var mapData = this.map[w][h];
                 var model = this.modelMgr.getModelByLevelNumber(mapData.level);
                 if (model) {
-                    // mapData.object = model;
-                    // mapData.object.position.x = w * this.tileSize;
-                    // mapData.object.position.z = h * this.tileSize;
-                    // this.scene.add(mapData.object);
-                    // // 픽킹용 패널
-                    // const plate = this.plateBase.clone();
-                    // plate.name = w + '_' + h + '/plate';
-                    // plate.position.copy(mapData.object.position);
-                    // plate.updateMatrixWorld(true);
-                    // plate.userData['linkedTile'] = mapData;
-                    // this.pickPlates.push(plate);
-                    // mapData.object = null;
+                    mapData.object = model;
+                    mapData.object.position.x = w * this.tileSize;
+                    mapData.object.position.z = h * this.tileSize;
+                    this.scene.add(mapData.object);
                 }
             }
         }
@@ -54058,6 +54072,7 @@ var Board = /** @class */ (function () {
         var sphere = new three_1.Sphere();
         bounding.getBoundingSphere(sphere);
         this.scoreMgr.sphere = sphere.clone();
+        this.gameTimer.sphere = sphere.clone();
         this.tileHolder.boardSphere = sphere.clone();
         this.gameStarter.boardSphere = sphere.clone();
         this.camControl.target = sphere.center;
@@ -54082,6 +54097,20 @@ var Board = /** @class */ (function () {
         this.scene.add(this.curtain);
         // 바운딩 저장
         this.boardBounding.copy(bounding);
+    };
+    /**
+     * w,h에 매칭되는 타일 레벨 반환
+     */
+    Board.prototype.findMatchedLevel = function (w, h, levelStorageTile) {
+        var result = 0;
+        for (var i = 0; i < levelStorageTile.length; i++) {
+            if (levelStorageTile[i].w === w && levelStorageTile[i].h === h) {
+                result = levelStorageTile[i].level;
+                levelStorageTile.splice(i, 1);
+                break;
+            }
+        }
+        return result;
     };
     /**
      * 대상타일 기준으로 3타일 매치가 성사되는지 체크한다.
@@ -54247,7 +54276,6 @@ var Board = /** @class */ (function () {
                     matched[i].object = emptyTile;
                     matched[i].level = 0;
                 }
-                console.warn('최대레벨 타일 매치됨.');
             }
         }
     };
@@ -54403,6 +54431,7 @@ var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenj
 var soundManager_1 = __webpack_require__(/*! ./soundManager */ "./src/soundManager.ts");
 var tileHolder_1 = __webpack_require__(/*! ./tileHolder */ "./src/tileHolder.ts");
 var gameStarter_1 = __webpack_require__(/*! ./gameStarter */ "./src/gameStarter.ts");
+var gameTimer_1 = __webpack_require__(/*! ./gameTimer */ "./src/gameTimer.ts");
 /**
  * 엔진 코어
  */
@@ -54469,26 +54498,32 @@ var Core = /** @class */ (function () {
         var scope = this;
         // 모델 인스턴스
         this.model = new model_1.ModelManager(this.scene, function () {
+            // 게임 타이머
+            scope.gameTimer = new gameTimer_1.GameTimer(scope.scene, scope.camera, scope.control);
             // 사운드 관리자
             scope.soundMgr = new soundManager_1.SoundManager(scope.camera);
             // 스코어 객체
             scope.scoreMgr = new score_1.ScoreManager(scope.scene, scope.camera, scope.control);
             // 게임판 인스턴스
-            scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
+            scope.board = new board_1.Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr, scope.gameTimer);
             // 게임로직
-            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.control, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
+            scope.gameLogic = new gamelogic_1.GameLogic(scope.scene, scope.camera, scope.control, scope.board, scope.model, scope.scoreMgr, scope.soundMgr, scope.gameTimer);
             // 타일 홀딩
             scope.tileHolder = new tileHolder_1.TileHolder(scope.scene, scope.camera, scope.control, scope.model);
             scope.gameLogic.setTileHolder(scope.tileHolder);
             scope.board.setTileHolder(scope.tileHolder);
             scope.tileHolder.setVisible(false);
             scope.scoreMgr.setVisible(false);
+            scope.gameTimer.setVisible(false);
+            scope.gameTimer.setGameLogic(scope.gameLogic);
             // 게임 스타터
             scope.gameStarter = new gameStarter_1.GameStarter(scope.scene, scope.camera, scope.control, function () {
                 scope.control.autoRotate = false;
                 scope.control.enabled = true;
                 scope.tileHolder.setVisible(true);
                 scope.scoreMgr.setVisible(true);
+                scope.gameTimer.setVisible(true);
+                scope.gameTimer.isPlaying = true;
                 scope.soundMgr.playSound('BGM');
                 scope.gameLogic.createCursor();
                 scope.gameLogic.enable();
@@ -54520,6 +54555,7 @@ var Core = /** @class */ (function () {
         this.tileHolder.update(deltaTime);
         this.scoreMgr.update(deltaTime);
         this.board.update(deltaTime);
+        this.gameTimer.update(deltaTime);
         this.control.update();
         this.renderer.render(this.scene, this.camera);
     };
@@ -54558,7 +54594,12 @@ exports.Core = Core;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(/*! ./core */ "./src/core.ts");
-exports.Core = core_1.Core;
+//export { Core };
+window.onload = function () {
+    var app = new core_1.Core(function () {
+        app.createGame(10, 10);
+    });
+};
 
 
 /***/ }),
@@ -54638,6 +54679,8 @@ var GameStarter = /** @class */ (function () {
         //result.y += 20;
         this.text.position.copy(result);
         this.text.lookAt(this.control.target);
+        this.pickSphere = new three_1.Sphere();
+        new three_1.Box3().setFromObject(this.text).getBoundingSphere(this.pickSphere);
     };
     /**
      * 포인터 다운 이벤트 처리
@@ -54653,14 +54696,21 @@ var GameStarter = /** @class */ (function () {
      * 포인터 이동 이벤트 처리
      */
     GameStarter.prototype.onPointerMove = function (event) {
-        // ray 계산
-        this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
-        this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        this.rayCast.setFromCamera(this.mousePos, this.camera);
-        // 보드판에 픽킹 처리를 한다.
-        var intersects = this.rayCast.intersectObjects([this.text]);
-        if (intersects && intersects.length > 0) {
-            this.underLine.visible = true;
+        if (this.pickSphere) {
+            // ray 계산
+            this.mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+            this.mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            this.rayCast.setFromCamera(this.mousePos, this.camera);
+            // 보드판에 픽킹 처리를 한다.
+            //const intersects = this.rayCast.intersectObjects([this.text]);            
+            //if( intersects && intersects.length > 0 ) {
+            var target = new three_1.Vector3();
+            if (this.rayCast.ray.intersectSphere(this.pickSphere, target)) {
+                this.underLine.visible = true;
+            }
+            else {
+                this.underLine.visible = false;
+            }
         }
         else {
             this.underLine.visible = false;
@@ -54696,6 +54746,218 @@ exports.GameStarter = GameStarter;
 
 /***/ }),
 
+/***/ "./src/gameTimer.ts":
+/*!**************************!*\
+  !*** ./src/gameTimer.ts ***!
+  \**************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
+var FontData_Bold_Italic = __webpack_require__(/*! ./Open_Sans_Bold_Italic.json */ "./src/Open_Sans_Bold_Italic.json");
+/**
+ * 게임 시간 표시
+ */
+var GameTimer = /** @class */ (function () {
+    /**
+     * 생성자
+     */
+    function GameTimer(scene, camera, control) {
+        var _this = this;
+        this.scene = scene;
+        this.camera = camera;
+        this.control = control;
+        this.remainTime = 300;
+        this.timeCheck = 0;
+        this.isPlaying = false;
+        // 폰트 데이터
+        var fontLoader = new three_1.FontLoader();
+        this.fontData = fontLoader.parse(FontData_Bold_Italic);
+        // geometry 생성
+        this.longestInterval = 0;
+        this.geometries = {};
+        var textList = ['Time:', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        textList.forEach(function (text, i) {
+            var geometry = new three_1.TextBufferGeometry(text, {
+                font: _this.fontData,
+                size: 2.5,
+                height: 2
+            });
+            // geometry의 바운딩을 계산하여 중점으로 이동
+            geometry.computeBoundingBox();
+            var size = new three_1.Vector3();
+            geometry.boundingBox.getSize(size);
+            geometry.translate(size.x * -0.5, size.y * -0.5, size.z * -0.5);
+            _this.geometries[text] = geometry;
+            if (0 < i) {
+                _this.longestInterval = Math.max(_this.longestInterval, size.x);
+            }
+        });
+        // 공유재질
+        this.sharedMaterial = new three_1.MeshPhongMaterial({
+            color: 0x00ff00,
+            specular: 0x00ff00,
+            shininess: 100
+        });
+        // 루트 그룹
+        this.rootGroup = new three_1.Group();
+        this.scene.add(this.rootGroup);
+        // 시간표시 가시화 객체 업데이트
+        this.updateTimeMesh();
+        this.initGameOverText();
+    }
+    /**
+     * 게임 오버 텍스트 표시
+     */
+    GameTimer.prototype.initGameOverText = function () {
+        var geometry = new three_1.TextBufferGeometry('GameOver', {
+            font: this.fontData,
+            size: 10,
+            height: 2
+        });
+        // geometry의 바운딩을 계산하여 중점으로 이동
+        geometry.computeBoundingBox();
+        var size = new three_1.Vector3();
+        geometry.boundingBox.getSize(size);
+        geometry.translate(size.x * -0.5, size.y * -0.5, size.z * -0.5);
+        var material = new three_1.MeshPhongMaterial({
+            color: 0xff0000,
+            specular: 0xff0000,
+            shininess: 100
+        });
+        this.gameOverText = new three_1.Mesh(geometry, material);
+        this.scene.add(this.gameOverText);
+        this.gameOverText.visible = false;
+    };
+    /**
+     * 시간표시 가시화 객체 업데이트
+     */
+    GameTimer.prototype.updateTimeMesh = function () {
+        // 이전 가시화 객체 제거
+        var childCount = this.rootGroup.children.length;
+        for (var c = 0; c < childCount; c++) {
+            var child = this.rootGroup.children[0];
+            this.rootGroup.remove(child);
+        }
+        // 'Time:' 객체
+        var mesh = new three_1.Mesh(this.geometries['Time:'], this.sharedMaterial);
+        this.rootGroup.add(mesh);
+        mesh.position.set(0, 0, 0);
+        // Time 바운딩 계산
+        var bBox = this.geometries['Time:'].boundingBox.clone();
+        var center = new three_1.Vector3(), size = new three_1.Vector3();
+        bBox.getCenter(center);
+        bBox.getSize(size);
+        // 공백처리
+        var whiteSpace = new three_1.Vector3();
+        this.geometries['0'].boundingBox.getSize(whiteSpace);
+        // 남은 시간을 문자화하고 0번째부터 n번째까지 가시화 객체로 생성
+        var strTime = this.remainTime.toString();
+        for (var i = 0; i < strTime.length; i++) {
+            // 생성
+            mesh = new three_1.Mesh(this.geometries[strTime[i]], this.sharedMaterial);
+            this.rootGroup.add(mesh);
+            // 위치 설정
+            mesh.position.x = center.x + (size.x * 0.5) + whiteSpace.x + (this.longestInterval * i);
+            bBox.expandByObject(mesh);
+        }
+        // 위치 조정
+        var minX = Number.MAX_VALUE, maxX = Number.MIN_VALUE, halfX = null;
+        for (var i = 1; i < this.rootGroup.children.length; i++) {
+            var child = this.rootGroup.children[i];
+            var currBox = child.geometry.boundingBox.clone();
+            currBox.translate(child.position);
+            minX = Math.min(minX, currBox.min.x);
+            maxX = Math.max(maxX, currBox.max.x);
+        }
+        halfX = (maxX - minX) * 0.5;
+        for (var i = 0; i < this.rootGroup.children.length; i++) {
+            var child = this.rootGroup.children[i];
+            child.translateX(-halfX);
+        }
+    };
+    /**
+     * 업데이트
+     */
+    GameTimer.prototype.update = function (deltaTime) {
+        if (this.sphere) {
+            var camForward = new three_1.Vector3();
+            this.camera.getWorldDirection(camForward);
+            var target = this.control.target.clone();
+            target.addScaledVector(camForward, this.sphere.radius);
+            var plane = new three_1.Plane().setFromNormalAndCoplanarPoint(new three_1.Vector3(0, 1, 0), this.sphere.center);
+            var project = new three_1.Vector3();
+            plane.projectPoint(target, project);
+            var direction = new three_1.Vector3().subVectors(project, this.control.target);
+            direction.normalize();
+            var result = this.control.target.clone();
+            result.addScaledVector(direction, this.sphere.radius + 10);
+            result.y -= 2.5;
+            this.rootGroup.position.copy(result);
+            this.rootGroup.lookAt(this.control.target);
+            if (this.isPlaying) {
+                this.timeCheck += deltaTime;
+                if (this.timeCheck >= 1.0) {
+                    this.timeCheck = 0;
+                    this.remainTime--;
+                    if (this.remainTime >= 0) {
+                        this.updateTimeMesh();
+                    }
+                    else {
+                        // 게임 오버 처리
+                        this.isPlaying = false;
+                        this.gameLogic.doGameOver();
+                    }
+                    // 시간 색상 처리
+                    if (this.remainTime <= 30) {
+                        this.sharedMaterial.color = new three_1.Color(0xff0000);
+                    }
+                    else if (this.remainTime <= 60) {
+                        this.sharedMaterial.color = new three_1.Color(0xffad3a);
+                    }
+                    else {
+                        this.sharedMaterial.color = new three_1.Color(0x00ff00);
+                    }
+                }
+            }
+            if (this.gameOverText && this.gameOverText.visible) {
+                this.gameOverText.position.copy(result);
+                this.gameOverText.position.y += 25;
+                this.gameOverText.lookAt(this.control.target);
+            }
+        }
+    };
+    /**
+     * 가시화 설정
+     */
+    GameTimer.prototype.setVisible = function (isVisible) {
+        this.rootGroup.visible = isVisible;
+    };
+    /**
+     * 게임로직 인스턴스 설정
+     */
+    GameTimer.prototype.setGameLogic = function (logic) {
+        this.gameLogic = logic;
+    };
+    /**
+     * 시간표시 관련 리셋 처리
+     */
+    GameTimer.prototype.reset = function () {
+        this.isPlaying = true;
+        this.remainTime = 300;
+        this.timeCheck = 0;
+        this.gameOverText.visible = false;
+    };
+    return GameTimer;
+}());
+exports.GameTimer = GameTimer;
+
+
+/***/ }),
+
 /***/ "./src/gamelogic.ts":
 /*!**************************!*\
   !*** ./src/gamelogic.ts ***!
@@ -54709,7 +54971,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var three_1 = __webpack_require__(/*! three */ "./node_modules/three/build/three.module.js");
 var TWEEN = __webpack_require__(/*! @tweenjs/tween.js */ "./node_modules/@tweenjs/tween.js/dist/tween.esm.js");
 var GameLogic = /** @class */ (function () {
-    function GameLogic(scene, camera, control, board, modelMgr, scoreMgr, soundMgr) {
+    function GameLogic(scene, camera, control, board, modelMgr, scoreMgr, soundMgr, gameTimer) {
         this.scene = scene;
         this.camera = camera;
         this.control = control;
@@ -54717,6 +54979,8 @@ var GameLogic = /** @class */ (function () {
         this.modelMgr = modelMgr;
         this.scoreMgr = scoreMgr;
         this.soundMgr = soundMgr;
+        this.gameTimer = gameTimer;
+        this.isSpawning = false;
         // 픽킹요소 초기화
         this.rayCast = new three_1.Raycaster();
         this.mousePos = new three_1.Vector2();
@@ -54738,6 +55002,7 @@ var GameLogic = /** @class */ (function () {
      * 기능 비활성화
      */
     GameLogic.prototype.disable = function () {
+        this.disposeCursor();
         window.removeEventListener('pointerdown', this.pointerDownBinder);
         window.removeEventListener('pointermove', this.pointerMoveBinder);
         window.removeEventListener('pointerup', this.pointerUpBinder);
@@ -54762,7 +55027,7 @@ var GameLogic = /** @class */ (function () {
         this.rayCast.setFromCamera(this.mousePos, this.camera);
         // 보드판에 픽킹 처리를 한다.
         var intersects = this.rayCast.intersectObjects(this.board.pickPlates);
-        if (intersects && intersects.length > 0) {
+        if (intersects && intersects.length > 0 && !this.isSpawning) {
             var pickObject = intersects[0].object;
             var tile = pickObject.userData['linkedTile'];
             if (tile.level === 0) {
@@ -54821,6 +55086,7 @@ var GameLogic = /** @class */ (function () {
                     this.scene.remove(targetTile_1.object);
                     targetTile_1.object = cloneObject;
                     // 애니메이션 처리
+                    this.isSpawning = true;
                     targetTile_1.object.position.y = -30;
                     new TWEEN.default.Tween(targetTile_1.object.position)
                         .to({
@@ -54832,6 +55098,7 @@ var GameLogic = /** @class */ (function () {
                         _this.board.checkTriple(targetTile_1, 1);
                         _this.createCursor();
                         _this.onPointerMove(event);
+                        _this.isSpawning = false;
                         // 게임오버 체크
                         _this.checkGameOver();
                     })
@@ -54848,7 +55115,9 @@ var GameLogic = /** @class */ (function () {
     GameLogic.prototype.createCursor = function (level) {
         var _this = this;
         if (!level) {
-            level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1; //level = 1;//
+            //level = 1;//
+            //level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+            level = this.getRandomTileNumber([30, 20, 14, 12, 10, 6, 4, 3, 1]) + 1;
         }
         var sourceObject = this.modelMgr.getModelByLevelNumber(level);
         // 원본 객체의 정보를 통해 새 객체 생성
@@ -54950,14 +55219,24 @@ var GameLogic = /** @class */ (function () {
     GameLogic.prototype.checkGameOver = function () {
         var zeroCount = this.board.getTileCountByLevel(0);
         if (zeroCount === 0) {
-            this.control.autoRotate = true;
-            this.control.enabled = false;
-            // 홀드 텍스트 숨기기
-            this.tileHolder.setVisible(false);
-            // 하이스코어 업데이트
-            this.scoreMgr.saveHighScore();
-            window.addEventListener('pointerup', this.restartPointerUpBinder, false);
+            this.doGameOver();
         }
+    };
+    /**
+     * 게임오버 처리
+     */
+    GameLogic.prototype.doGameOver = function () {
+        this.control.autoRotate = true;
+        this.control.enabled = false;
+        // 홀드 텍스트 숨기기
+        this.tileHolder.setVisible(false);
+        // 하이스코어 업데이트
+        this.scoreMgr.saveHighScore();
+        // 시간 중지
+        this.gameTimer.isPlaying = false;
+        this.gameTimer.gameOverText.visible = true;
+        this.disable();
+        window.addEventListener('pointerup', this.restartPointerUpBinder, false);
     };
     /**
      * 재시작관련 포인터 처리
@@ -54969,10 +55248,12 @@ var GameLogic = /** @class */ (function () {
             this.control.enabled = true;
             this.tileHolder.disposeHolderObject();
             this.tileHolder.setVisible(true);
+            this.gameTimer.reset();
             this.scoreMgr.setScore(0);
             // 보드판 초기화
             this.board.createMap(this.board.mapWidth, this.board.mapHeight);
             this.createCursor();
+            this.enable();
         }
     };
     return GameLogic;
@@ -55652,6 +55933,8 @@ var TileHolder = /** @class */ (function () {
         result.y += 20;
         this.rootGroup.position.copy(result);
         this.rootGroup.lookAt(this.control.target);
+        this.holderPickSphere = new three_1.Sphere();
+        new three_1.Box3().setFromObject(this.rootGroup).getBoundingSphere(this.holderPickSphere);
         if (this.holderObject) {
             this.holderObject.rotateY(Math.PI * deltaTime * 0.1);
         }
@@ -55660,8 +55943,16 @@ var TileHolder = /** @class */ (function () {
      * 홀드 텍스트와 픽킹 처리
      */
     TileHolder.prototype.pickTest = function (rayCast) {
-        var intersects = rayCast.intersectObjects(this.rootGroup.children, true);
-        if (intersects && intersects.length > 0) {
+        // const intersects = rayCast.intersectObjects(this.rootGroup.children, true);
+        // if( intersects && intersects.length > 0 ) {
+        //     this.underLine.visible = true;
+        //     return true;
+        // } else {
+        //     this.underLine.visible = false;
+        //     return false;
+        // }
+        var dummy = new three_1.Vector3();
+        if (rayCast.ray.intersectSphere(this.holderPickSphere, dummy)) {
             this.underLine.visible = true;
             return true;
         }

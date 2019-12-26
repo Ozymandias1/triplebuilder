@@ -25,6 +25,8 @@ export class TileHolder {
     
     public boardSphere: Sphere;
 
+    public holderPickSphere: Sphere;
+
     /**
      * 생성자
      * @param scene 씬 객체
@@ -105,6 +107,9 @@ export class TileHolder {
         this.rootGroup.position.copy(result);
         this.rootGroup.lookAt(this.control.target);
 
+        this.holderPickSphere = new Sphere();
+        new Box3().setFromObject(this.rootGroup).getBoundingSphere(this.holderPickSphere);
+
         if( this.holderObject ) {
             this.holderObject.rotateY(Math.PI * deltaTime * 0.1);
         }
@@ -116,8 +121,16 @@ export class TileHolder {
      */
     pickTest(rayCast: Raycaster): boolean {
 
-        const intersects = rayCast.intersectObjects(this.rootGroup.children, true);
-        if( intersects && intersects.length > 0 ) {
+        // const intersects = rayCast.intersectObjects(this.rootGroup.children, true);
+        // if( intersects && intersects.length > 0 ) {
+        //     this.underLine.visible = true;
+        //     return true;
+        // } else {
+        //     this.underLine.visible = false;
+        //     return false;
+        // }
+        const dummy = new Vector3();
+        if( rayCast.ray.intersectSphere(this.holderPickSphere, dummy) ) {
             this.underLine.visible = true;
             return true;
         } else {

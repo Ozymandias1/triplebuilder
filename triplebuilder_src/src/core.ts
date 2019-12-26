@@ -9,6 +9,7 @@ import * as Font_Bold_Italic from './Open_Sans_Bold_Italic.json';
 import { SoundManager } from './soundManager';
 import { TileHolder } from './tileHolder';
 import { GameStarter } from './gameStarter';
+import { GameTimer } from './gameTimer';
 
 /**
  * 엔진 코어
@@ -32,6 +33,7 @@ export class Core {
     private soundMgr: SoundManager;
     private tileHolder: TileHolder;
     private gameStarter: GameStarter;
+    private gameTimer: GameTimer;
     
 
     /**
@@ -107,14 +109,16 @@ export class Core {
         const scope = this;
         // 모델 인스턴스
         this.model = new ModelManager(this.scene, function(){
+            // 게임 타이머
+            scope.gameTimer = new GameTimer(scope.scene, scope.camera, scope.control);
             // 사운드 관리자
             scope.soundMgr = new SoundManager(scope.camera);
             // 스코어 객체
             scope.scoreMgr = new ScoreManager(scope.scene, scope.camera, scope.control);
             // 게임판 인스턴스
-            scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr);
+            scope.board = new Board(scope.scene, scope.model, scope.camera, scope.control, scope.scoreMgr, scope.soundMgr, scope.gameTimer);
             // 게임로직
-            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.control, scope.board, scope.model, scope.scoreMgr, scope.soundMgr);
+            scope.gameLogic = new GameLogic(scope.scene, scope.camera, scope.control, scope.board, scope.model, scope.scoreMgr, scope.soundMgr, scope.gameTimer);
             // 타일 홀딩
             scope.tileHolder = new TileHolder(scope.scene, scope.camera, scope.control, scope.model);
             scope.gameLogic.setTileHolder(scope.tileHolder);
@@ -122,6 +126,8 @@ export class Core {
 
             scope.tileHolder.setVisible(false);
             scope.scoreMgr.setVisible(false);
+            scope.gameTimer.setVisible(false);
+            scope.gameTimer.setGameLogic(scope.gameLogic);
 
             // 게임 스타터
             scope.gameStarter = new GameStarter(scope.scene, scope.camera, scope.control, () => {
@@ -131,6 +137,8 @@ export class Core {
 
                 scope.tileHolder.setVisible(true);
                 scope.scoreMgr.setVisible(true);
+                scope.gameTimer.setVisible(true);
+                scope.gameTimer.isPlaying = true;
                 scope.soundMgr.playSound('BGM');
 
                 scope.gameLogic.createCursor();
@@ -172,6 +180,7 @@ export class Core {
         this.tileHolder.update(deltaTime);
         this.scoreMgr.update(deltaTime);
         this.board.update(deltaTime);
+        this.gameTimer.update(deltaTime);
         this.control.update();
         
         this.renderer.render(this.scene, this.camera);

@@ -1,11 +1,12 @@
-import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial, Camera, Box3, Sphere, Vector3, Plane } from "three";
+import { Scene, BoxBufferGeometry, MeshPhongMaterial, Mesh, Raycaster, Object3D, MeshBasicMaterial, Camera, Box3, Sphere, Vector3, Plane, Math as THREEMATH } from "three";
 import { ModelManager } from './model';
 import * as TWEEN from '@tweenjs/tween.js';
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { OrbitControls, MapControls } from "three/examples/jsm/controls/OrbitControls";
 import { ScoreManager } from "./score";
 import { SoundManager } from "./soundManager";
 import { TileHolder } from "./tileHolder";
 import { GameStarter } from "./gameStarter";
+import { GameTimer } from "./gameTimer";
 
 export class Tile {
     public object: Mesh;
@@ -61,11 +62,12 @@ export class Board {
     private tileFacingAngleArray: TileFacingAngleData[];
     private prevFacingIndex: number;
     private gameStarter: GameStarter;
+    private gameTimer: GameTimer;
 
     /**
      * 생성자
      */
-    constructor(scene: Scene, modelMgr: ModelManager, camera: Camera, camControl: OrbitControls, scoreMgr: ScoreManager, soundMgr: SoundManager) {
+    constructor(scene: Scene, modelMgr: ModelManager, camera: Camera, camControl: OrbitControls, scoreMgr: ScoreManager, soundMgr: SoundManager, gameTimer: GameTimer) {
 
         this.scene = scene;
         this.modelMgr = modelMgr;
@@ -73,6 +75,7 @@ export class Board {
         this.camControl = camControl;
         this.scoreMgr = scoreMgr;
         this.soundMgr = soundMgr;
+        this.gameTimer = gameTimer;
         this.tileSize = 10;
         this.pickPlates = [];
         this.floorPlates = [];
@@ -167,12 +170,38 @@ export class Board {
         this.mapWidth = width;
         this.mapHeight = height;
 
+        // 랜덤 맵타일 레벨당 개수
+        // 5, 3, 1, 1, 1, 1, 1, 1, 1
+        const levelStorage = [9,8,7,6,5,4,3,2,2,2,1,1,1,1,1];
+        const levelStorageTile = [];
+        const levelMap = [];
+        for(let w = 0; w < this.mapWidth; w++) {
+            for(let h = 0; h < this.mapHeight; h++) {
+                levelMap.push({ w: w, h: h });
+            }
+        }
+        for(let l = 0; l < levelStorage.length; l++) {
+            const level = levelStorage[l];
+            
+            const index = THREEMATH.randInt(0, levelMap.length-1);
+            
+            levelStorageTile.push({
+                w: levelMap[index].w,
+                h: levelMap[index].h,
+                level: level
+            });
+            levelMap.splice(index, 1);
+        }
+
         // 가로세로 개수만큼 초기화
         this.map = [];
         for(let w = 0; w < width; w++) {
             this.map[w] = [];
             for(let h = 0; h < height; h++) {
-                this.map[w][h] = new Tile(w, h, 0);
+
+                let level = this.findMatchedLevel(w, h, levelStorageTile);
+
+                this.map[w][h] = new Tile(w, h, level);
 
                 // 바닥판생성, 0레벨 판으로 깔린다.
                 const model = this.modelMgr.getModelByLevelNumber(0);
@@ -197,19 +226,10 @@ export class Board {
                 const mapData = this.map[w][h];
                 const model = this.modelMgr.getModelByLevelNumber(mapData.level);
                 if( model ) {
-                    // mapData.object = model;
-                    // mapData.object.position.x = w * this.tileSize;
-                    // mapData.object.position.z = h * this.tileSize;
-                    // this.scene.add(mapData.object);
-
-                    // // 픽킹용 패널
-                    // const plate = this.plateBase.clone();
-                    // plate.name = w + '_' + h + '/plate';
-                    // plate.position.copy(mapData.object.position);
-                    // plate.updateMatrixWorld(true);
-                    // plate.userData['linkedTile'] = mapData;
-                    // this.pickPlates.push(plate);
-                    // mapData.object = null;
+                    mapData.object = model;
+                    mapData.object.position.x = w * this.tileSize;
+                    mapData.object.position.z = h * this.tileSize;
+                    this.scene.add(mapData.object);
                 }
             }
         }
@@ -224,6 +244,7 @@ export class Board {
         const sphere = new Sphere();
         bounding.getBoundingSphere(sphere);
         this.scoreMgr.sphere = sphere.clone();
+        this.gameTimer.sphere = sphere.clone();
         this.tileHolder.boardSphere = sphere.clone();
         this.gameStarter.boardSphere = sphere.clone();
 
@@ -255,6 +276,24 @@ export class Board {
 
         // 바운딩 저장
         this.boardBounding.copy(bounding);
+    }
+
+    /**
+     * w,h에 매칭되는 타일 레벨 반환
+     */
+    findMatchedLevel(w: number, h: number, levelStorageTile: any): number {
+
+        let result = 0;
+
+        for(let i = 0; i < levelStorageTile.length; i++) {
+            if( levelStorageTile[i].w === w && levelStorageTile[i].h === h ) {
+                result = levelStorageTile[i].level;
+                levelStorageTile.splice(i, 1);
+                break;
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -432,7 +471,6 @@ export class Board {
                     matched[i].object = emptyTile;
                     matched[i].level = 0;
                 }
-                console.warn('최대레벨 타일 매치됨.');
             }
         }
     }

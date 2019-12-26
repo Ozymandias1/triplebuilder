@@ -1,4 +1,4 @@
-import { Scene, Camera, Font, FontLoader, TextBufferGeometry, Vector3, MeshPhongMaterial, Mesh, Sphere, Plane, BoxBufferGeometry, Raycaster, Vector2 } from "three";
+import { Scene, Camera, Font, FontLoader, TextBufferGeometry, Vector3, MeshPhongMaterial, Mesh, Sphere, Plane, BoxBufferGeometry, Raycaster, Vector2, Box3 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import * as FontData_Bold_Italic from './Open_Sans_Bold_Italic.json';
 
@@ -21,6 +21,7 @@ export class GameStarter {
     private pointerDownBinder: any;
     private pointerMoveBinder: any;
     private pointerUpBinder: any;
+    private pickSphere: Sphere;
 
     private onStart: Function;
 
@@ -99,6 +100,8 @@ export class GameStarter {
         this.text.position.copy(result);
         this.text.lookAt(this.control.target);
 
+        this.pickSphere = new Sphere();
+        new Box3().setFromObject(this.text).getBoundingSphere(this.pickSphere);
     }
     
     /**
@@ -117,19 +120,24 @@ export class GameStarter {
      */
     onPointerMove(event: PointerEvent) {
 
-        // ray 계산
-        this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-        this.mousePos.y = -( event.clientY / window.innerHeight ) * 2 + 1;
-        this.rayCast.setFromCamera( this.mousePos, this.camera );
-
-        // 보드판에 픽킹 처리를 한다.
-        const intersects = this.rayCast.intersectObjects([this.text]);
-        if( intersects && intersects.length > 0 ) {
-            this.underLine.visible = true;
+        if( this.pickSphere ) {
+            // ray 계산
+            this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            this.mousePos.y = -( event.clientY / window.innerHeight ) * 2 + 1;
+            this.rayCast.setFromCamera( this.mousePos, this.camera );
+    
+            // 보드판에 픽킹 처리를 한다.
+            //const intersects = this.rayCast.intersectObjects([this.text]);            
+            //if( intersects && intersects.length > 0 ) {
+            const target = new Vector3();
+            if(this.rayCast.ray.intersectSphere(this.pickSphere, target)) {
+                this.underLine.visible = true;
+            } else {
+                this.underLine.visible = false;
+            }
         } else {
             this.underLine.visible = false;
         }
-
     }
     
     /**

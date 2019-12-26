@@ -6,6 +6,7 @@ import { ScoreManager } from "./score";
 import { SoundManager } from "./soundManager";
 import { TileHolder } from "./tileHolder";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { GameTimer } from "./gameTimer";
 
 export class GameLogic {
 
@@ -16,6 +17,7 @@ export class GameLogic {
     private modelMgr: ModelManager;
     private scoreMgr: ScoreManager;
     private soundMgr: SoundManager;
+    private gameTimer: GameTimer;
     private cursor: Object3D;
     private tileHolder: TileHolder;
 
@@ -26,10 +28,11 @@ export class GameLogic {
     private pointerDownBinder: any;
     private pointerMoveBinder: any;
     private pointerUpBinder: any;
+    private isSpawning: boolean;
     
     private restartPointerUpBinder: any;
 
-    constructor(scene: Scene, camera: Camera, control: OrbitControls, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager, soundMgr: SoundManager) {
+    constructor(scene: Scene, camera: Camera, control: OrbitControls, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager, soundMgr: SoundManager, gameTimer: GameTimer) {
 
         this.scene = scene;
         this.camera = camera;
@@ -38,6 +41,8 @@ export class GameLogic {
         this.modelMgr = modelMgr;
         this.scoreMgr = scoreMgr;
         this.soundMgr = soundMgr;
+        this.gameTimer = gameTimer;
+        this.isSpawning = false;
 
         // 픽킹요소 초기화
         this.rayCast = new Raycaster();
@@ -63,6 +68,7 @@ export class GameLogic {
      * 기능 비활성화
      */
     disable() {
+        this.disposeCursor();
         window.removeEventListener('pointerdown', this.pointerDownBinder);
         window.removeEventListener('pointermove', this.pointerMoveBinder);
         window.removeEventListener('pointerup', this.pointerUpBinder);
@@ -91,7 +97,7 @@ export class GameLogic {
 
         // 보드판에 픽킹 처리를 한다.
         const intersects = this.rayCast.intersectObjects(this.board.pickPlates);
-        if( intersects && intersects.length > 0 ) {
+        if( intersects && intersects.length > 0 && !this.isSpawning ) {
 
             const pickObject = intersects[0].object;
             const tile = <Tile>pickObject.userData['linkedTile'];
@@ -159,6 +165,7 @@ export class GameLogic {
                     targetTile.object = cloneObject;
 
                     // 애니메이션 처리
+                    this.isSpawning = true;
                     targetTile.object.position.y = -30;
                     new TWEEN.default.Tween(targetTile.object.position)
                     .to({
@@ -170,7 +177,8 @@ export class GameLogic {
                         this.board.checkTriple(targetTile, 1);
                         this.createCursor();
                         this.onPointerMove(event);
-
+                        this.isSpawning = false;
+                        
                         // 게임오버 체크
                         this.checkGameOver();
                     })
@@ -189,7 +197,9 @@ export class GameLogic {
     createCursor(level?: number) {
 
         if( !level ) {
-            level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;//level = 1;//
+            //level = 1;//
+            //level = this.getRandomTileNumber([40.0, 30.0, 20.0, 10.0]) + 1;
+            level = this.getRandomTileNumber([30, 20, 14, 12, 10, 6, 4, 3, 1]) + 1;
         }
         const sourceObject = this.modelMgr.getModelByLevelNumber(level);
 
@@ -304,18 +314,32 @@ export class GameLogic {
         
         const zeroCount = this.board.getTileCountByLevel(0);
         if( zeroCount === 0 ) {
-            
-            this.control.autoRotate = true;
-            this.control.enabled = false;
 
-            // 홀드 텍스트 숨기기
-            this.tileHolder.setVisible(false);
-
-            // 하이스코어 업데이트
-            this.scoreMgr.saveHighScore();
-
-            window.addEventListener('pointerup', this.restartPointerUpBinder, false);
+            this.doGameOver();
         }
+    }
+
+    /**
+     * 게임오버 처리
+     */
+    doGameOver() {
+            
+        this.control.autoRotate = true;
+        this.control.enabled = false;
+
+        // 홀드 텍스트 숨기기
+        this.tileHolder.setVisible(false);
+
+        // 하이스코어 업데이트
+        this.scoreMgr.saveHighScore();
+
+        // 시간 중지
+        this.gameTimer.isPlaying = false;
+        this.gameTimer.gameOverText.visible = true;
+
+        this.disable();
+
+        window.addEventListener('pointerup', this.restartPointerUpBinder, false);
     }
 
     /**
@@ -333,12 +357,15 @@ export class GameLogic {
             this.tileHolder.disposeHolderObject();
             this.tileHolder.setVisible(true);
 
+            this.gameTimer.reset();
+
             this.scoreMgr.setScore(0);
 
             // 보드판 초기화
             this.board.createMap(this.board.mapWidth, this.board.mapHeight);
             this.createCursor();
 
+            this.enable();
         }
     }
 }
