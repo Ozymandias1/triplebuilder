@@ -32,6 +32,9 @@ export class GameLogic {
     
     private restartPointerUpBinder: any;
 
+    /**
+     * 생성자
+     */
     constructor(scene: Scene, camera: Camera, control: OrbitControls, board: Board, modelMgr: ModelManager, scoreMgr: ScoreManager, soundMgr: SoundManager, gameTimer: GameTimer) {
 
         this.scene = scene;
@@ -277,13 +280,6 @@ export class GameLogic {
      */
     disposeCursor() {
         if( this.cursor ) {
-            // this.scene.remove(this.cursor);
-            // for(let i = 0; i < this.cursor.children.length; i++) {
-            //     const child = <LineSegments>this.cursor.children[i];
-            //     child.geometry.dispose();
-            //     (<any>child.material).dispose();
-            // }
-            // this.cursor = null;
             this.scene.remove(this.cursor);
             this.cursor.traverse((child)=>{
                 if( child instanceof Mesh ) {

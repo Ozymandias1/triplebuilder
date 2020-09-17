@@ -8,6 +8,9 @@ import { TileHolder } from "./tileHolder";
 import { GameStarter } from "./gameStarter";
 import { GameTimer } from "./gameTimer";
 
+/**
+ * 타일 요소
+ */
 export class Tile {
     public object: Mesh;
     public tileW: number;
@@ -22,6 +25,9 @@ export class Tile {
     }
 }
 
+/**
+ * 타일 방향
+ */
 class TileFacingAngleData {
     public direction: Vector3;
     public angle: number;
@@ -148,7 +154,7 @@ export class Board {
 
         }
 
-        // 커튼 제거
+        // 커튼(게임판 옆면) 제거
         if( this.curtain ) {
             this.scene.remove(this.curtain);
             this.curtain.geometry.dispose();

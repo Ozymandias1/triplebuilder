@@ -77,7 +77,8 @@ export class GameStarter {
         window.addEventListener('pointerup', this.pointerUpBinder, false);
     }
 
-    /*** 업데이트
+    /**
+     * 업데이트
      */
     update(deltaTime: number){
 

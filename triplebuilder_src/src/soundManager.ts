@@ -62,11 +62,6 @@ export class SoundManager {
         }, null, (err: any) => {
             console.error(err);
         });
-        
-        // setTimeout(() => {
-        //     // 일단 테스트로 배경음을 클래스 인스턴스 생성시점에서 3초후 재생
-        //     scope.playSound('BGM');
-        // }, 3000);
     }
     
     /**

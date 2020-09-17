@@ -46,7 +46,7 @@ export class ScoreManager {
         this.control = control;
         this.score = 0;
 
-        // 저장되어 있는 하이스코어를 가져옴
+        // localstorage에 저장되어 있는 하이스코어를 가져옴
         const storageHighScore = localStorage.getItem('highscore');
         if( !storageHighScore ) { // 하이스코어가 없다면 처음실행한것이므로 기본값 설정
 
